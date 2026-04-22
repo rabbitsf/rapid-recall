@@ -16,6 +16,7 @@ import usersRoutes from './routes/users.js'
 import classroomRoutes from './routes/classroom.js'
 
 const app = express()
+app.set('trust proxy', 1) // required when running behind Apache/nginx reverse proxy
 const PgSession = connectPgSimple(session)
 
 app.use(helmet({ contentSecurityPolicy: false }))
