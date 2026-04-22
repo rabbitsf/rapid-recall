@@ -18,7 +18,7 @@ export default function StudentProgress() {
       .finally(() => setLoading(false))
   }, [id])
 
-  if (loading) return <div className="flex justify-center py-20"><div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" /></div>
+  if (loading) return <div className="flex justify-center py-20"><div className="w-8 h-8 border-4 border-crimson-600 border-t-transparent rounded-full animate-spin" /></div>
   if (error) return <div className="text-center py-20 text-red-500">{error}</div>
   if (!data) return null
 
@@ -26,7 +26,7 @@ export default function StudentProgress() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in duration-300">
-      <button onClick={() => navigate('/')} className="flex items-center gap-2 text-slate-500 hover:text-indigo-600 font-medium transition-colors touch-manipulation">
+      <button onClick={() => navigate('/')} className="flex items-center gap-2 text-slate-500 hover:text-crimson-600 font-medium transition-colors touch-manipulation">
         <ArrowLeft size={18} /> Back to Dashboard
       </button>
 
@@ -38,9 +38,9 @@ export default function StudentProgress() {
       {/* Summary cards */}
       <div className="grid grid-cols-3 gap-4">
         {[
-          { label: 'Total Students', value: data.students.length, icon: Trophy, color: 'indigo' },
+          { label: 'Total Students', value: data.students.length, icon: Trophy, color: 'crimson' },
           { label: 'Avg Practice Time', value: `${data.students.length ? Math.round(data.students.reduce((s, st) => s + st.totalMinutes, 0) / data.students.length) : 0}m`, icon: Clock, color: 'emerald' },
-          { label: 'Total Game Sessions', value: data.students.reduce((s, st) => s + st.gameCount, 0), icon: Gamepad2, color: 'purple' },
+          { label: 'Total Game Sessions', value: data.students.reduce((s, st) => s + st.gameCount, 0), icon: Gamepad2, color: 'gold' },
         ].map(card => (
           <div key={card.label} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 text-center">
             <card.icon size={24} className={`mx-auto mb-2 text-${card.color}-600`} />
@@ -66,7 +66,7 @@ export default function StudentProgress() {
               <div className="flex items-center gap-3 min-w-0">
                 {student.photoUrl
                   ? <img src={student.photoUrl} alt="" className="w-9 h-9 rounded-full shrink-0" />
-                  : <div className="w-9 h-9 rounded-full bg-indigo-200 flex items-center justify-center text-indigo-700 font-bold shrink-0">{student.displayName?.[0]}</div>
+                  : <div className="w-9 h-9 rounded-full bg-crimson-200 flex items-center justify-center text-crimson-700 font-bold shrink-0">{student.displayName?.[0]}</div>
                 }
                 <div className="min-w-0">
                   <p className="font-semibold text-slate-800 text-sm truncate">{student.displayName}</p>
@@ -81,7 +81,7 @@ export default function StudentProgress() {
               <div className="text-right">
                 <span className="text-sm font-semibold text-slate-600">{student.gameCount}</span>
               </div>
-              <button onClick={() => setExpanded(expanded === student.id ? null : student.id)} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors touch-manipulation">
+              <button onClick={() => setExpanded(expanded === student.id ? null : student.id)} className="p-1.5 text-slate-400 hover:text-crimson-600 hover:bg-crimson-50 rounded-lg transition-colors touch-manipulation">
                 {expanded === student.id ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
               </button>
             </div>

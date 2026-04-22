@@ -69,16 +69,16 @@ export default function TeacherDashboard() {
       {/* Classes */}
       <section>
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2"><Users size={20} className="text-indigo-600" /> My Classes</h3>
-          <button onClick={() => navigate('/teacher/classroom')} className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-xl transition-colors">
+          <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2"><Users size={20} className="text-crimson-600" /> My Classes</h3>
+          <button onClick={() => navigate('/teacher/classroom')} className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-crimson-600 bg-crimson-50 hover:bg-crimson-100 rounded-xl transition-colors">
             <Download size={15} /> Import from Google Classroom
           </button>
         </div>
 
         <form onSubmit={handleCreateClass} className="flex gap-3 mb-6">
           <input value={newClassName} onChange={e => setNewClassName(e.target.value)} placeholder="New class name…"
-            className="flex-1 px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all" />
-          <button type="submit" disabled={creating || !newClassName.trim()} className="px-5 py-3 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white font-medium rounded-xl flex items-center gap-2 shadow-sm transition-all touch-manipulation">
+            className="flex-1 px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-crimson-500 focus:border-crimson-500 outline-none transition-all" />
+          <button type="submit" disabled={creating || !newClassName.trim()} className="px-5 py-3 bg-crimson-600 hover:bg-crimson-700 disabled:opacity-60 text-white font-medium rounded-xl flex items-center gap-2 shadow-sm transition-all touch-manipulation">
             <Plus size={18} /> Create
           </button>
         </form>
@@ -95,7 +95,7 @@ export default function TeacherDashboard() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {classes.map(cls => (
-              <div key={cls.id} className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm hover:shadow-md hover:border-indigo-200 transition-all">
+              <div key={cls.id} className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm hover:shadow-md hover:border-crimson-200 transition-all">
                 <div className="flex justify-between items-start mb-3">
                   {editingClassId === cls.id ? (
                     <div className="flex items-center gap-1.5 flex-1 mr-2">
@@ -104,13 +104,13 @@ export default function TeacherDashboard() {
                         value={editingName}
                         onChange={e => setEditingName(e.target.value)}
                         onKeyDown={e => { if (e.key === 'Enter') commitEdit(cls.id); if (e.key === 'Escape') cancelEdit() }}
-                        className="flex-1 font-bold text-slate-800 text-lg px-2 py-0.5 border border-indigo-400 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500/20"
+                        className="flex-1 font-bold text-slate-800 text-lg px-2 py-0.5 border border-crimson-400 rounded-lg outline-none focus:ring-2 focus:ring-crimson-500/20"
                       />
                       <button onClick={() => commitEdit(cls.id)} className="p-1 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"><Check size={16} /></button>
                       <button onClick={cancelEdit} className="p-1 text-slate-400 hover:bg-slate-100 rounded-lg transition-colors"><X size={16} /></button>
                     </div>
                   ) : (
-                    <button onClick={() => startEdit(cls)} className="font-bold text-slate-800 text-lg text-left hover:text-indigo-600 transition-colors group flex items-center gap-1.5">
+                    <button onClick={() => startEdit(cls)} className="font-bold text-slate-800 text-lg text-left hover:text-crimson-600 transition-colors group flex items-center gap-1.5">
                       {cls.name}
                       <Edit3 size={13} className="opacity-0 group-hover:opacity-40 transition-opacity shrink-0" />
                     </button>
@@ -121,10 +121,10 @@ export default function TeacherDashboard() {
                 </div>
                 <p className="text-sm text-slate-500 mb-4">{cls.members?.length ?? 0} students</p>
                 <div className="flex gap-2">
-                  <button onClick={() => navigate(`/classes/${cls.id}`)} className="flex-1 py-2 text-sm font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-xl flex items-center justify-center gap-1.5 transition-colors touch-manipulation">
+                  <button onClick={() => navigate(`/classes/${cls.id}`)} className="flex-1 py-2 text-sm font-medium text-crimson-600 bg-crimson-50 hover:bg-crimson-100 rounded-xl flex items-center justify-center gap-1.5 transition-colors touch-manipulation">
                     <Users size={15} /> Manage
                   </button>
-                  <button onClick={() => navigate(`/classes/${cls.id}/progress`)} className="flex-1 py-2 text-sm font-medium text-purple-600 bg-purple-50 hover:bg-purple-100 rounded-xl flex items-center justify-center gap-1.5 transition-colors touch-manipulation">
+                  <button onClick={() => navigate(`/classes/${cls.id}/progress`)} className="flex-1 py-2 text-sm font-medium text-gold-600 bg-gold-50 hover:bg-gold-100 rounded-xl flex items-center justify-center gap-1.5 transition-colors touch-manipulation">
                     <BarChart2 size={15} /> Progress
                   </button>
                 </div>
@@ -137,8 +137,8 @@ export default function TeacherDashboard() {
       {/* Word Sets */}
       <section>
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2"><Layers size={20} className="text-indigo-600" /> My Word Sets</h3>
-          <button onClick={() => navigate('/sets/new')} className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-xl font-medium flex items-center gap-2 shadow-sm transition-all active:scale-95 touch-manipulation text-sm">
+          <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2"><Layers size={20} className="text-crimson-600" /> My Word Sets</h3>
+          <button onClick={() => navigate('/sets/new')} className="bg-crimson-600 hover:bg-crimson-700 text-white px-4 py-2.5 rounded-xl font-medium flex items-center gap-2 shadow-sm transition-all active:scale-95 touch-manipulation text-sm">
             <Plus size={18} /> Create Set
           </button>
         </div>
@@ -151,16 +151,16 @@ export default function TeacherDashboard() {
           <div className="bg-white rounded-2xl border border-dashed border-slate-300 p-12 text-center">
             <Layers className="mx-auto h-12 w-12 text-slate-300 mb-4" />
             <p className="text-slate-500 mb-4">No sets yet.</p>
-            <button onClick={() => navigate('/sets/new')} className="text-indigo-600 font-medium hover:text-indigo-700 touch-manipulation">Create one now →</button>
+            <button onClick={() => navigate('/sets/new')} className="text-crimson-600 font-medium hover:text-crimson-700 touch-manipulation">Create one now →</button>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {mySets.map(set => (
-              <div key={set.id} onClick={() => setActiveSet(set)} className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm hover:shadow-md hover:border-indigo-200 transition-all cursor-pointer group flex flex-col touch-manipulation">
+              <div key={set.id} onClick={() => setActiveSet(set)} className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm hover:shadow-md hover:border-crimson-200 transition-all cursor-pointer group flex flex-col touch-manipulation">
                 <div className="flex justify-between items-start mb-4">
-                  <h3 className="text-xl font-bold text-slate-800 group-hover:text-indigo-600 transition-colors line-clamp-2">{set.title}</h3>
+                  <h3 className="text-xl font-bold text-slate-800 group-hover:text-crimson-600 transition-colors line-clamp-2">{set.title}</h3>
                   <div className="flex gap-1 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
-                    <button onClick={e => { e.stopPropagation(); navigate(`/sets/${set.id}/edit`) }} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg touch-manipulation"><Edit3 size={18} /></button>
+                    <button onClick={e => { e.stopPropagation(); navigate(`/sets/${set.id}/edit`) }} className="p-2 text-slate-400 hover:text-crimson-600 hover:bg-crimson-50 rounded-lg touch-manipulation"><Edit3 size={18} /></button>
                     <button onClick={e => handleDeleteSet(set.id, e)} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg touch-manipulation"><Trash2 size={18} /></button>
                   </div>
                 </div>
@@ -171,7 +171,7 @@ export default function TeacherDashboard() {
                 )}
                 <div className="mt-auto pt-4 border-t border-slate-100 flex items-center justify-between">
                   <span className="text-sm font-medium text-slate-500 bg-slate-100 px-3 py-1 rounded-full flex items-center gap-1.5"><Layers size={14} /> {set.cards.length} Cards</span>
-                  <span className="text-indigo-600 font-medium text-sm flex items-center gap-1 group-hover:translate-x-1 transition-transform">Play <Play size={16} /></span>
+                  <span className="text-crimson-600 font-medium text-sm flex items-center gap-1 group-hover:translate-x-1 transition-transform">Play <Play size={16} /></span>
                 </div>
               </div>
             ))}

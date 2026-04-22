@@ -73,7 +73,7 @@ export default function ClassroomImport() {
 
   if (connected === null) return (
     <div className="flex items-center justify-center py-24">
-      <RefreshCw className="animate-spin text-indigo-600" size={28} />
+      <RefreshCw className="animate-spin text-crimson-600" size={28} />
     </div>
   )
 
@@ -91,7 +91,7 @@ export default function ClassroomImport() {
 
       {!connected ? (
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-10 text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-indigo-50 text-indigo-600 mb-4">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-crimson-50 text-crimson-600 mb-4">
             <Link2 size={32} />
           </div>
           <h3 className="text-xl font-bold text-slate-800 mb-2">Google Classroom Not Connected</h3>
@@ -101,7 +101,7 @@ export default function ClassroomImport() {
                 Connect the school's Google Classroom account once — all teachers will be able to import from it.
               </p>
               <a href="/api/classroom/connect"
-                className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl transition-colors shadow-sm">
+                className="inline-flex items-center gap-2 px-6 py-3 bg-crimson-600 hover:bg-crimson-700 text-white font-semibold rounded-xl transition-colors shadow-sm">
                 <ShieldCheck size={18} /> Connect as Admin
               </a>
             </>
@@ -119,7 +119,7 @@ export default function ClassroomImport() {
               Connected via <strong>{connectionInfo?.via ?? 'admin'}</strong>
             </p>
             <div className="flex items-center gap-3">
-              <button onClick={fetchCourses} disabled={loading} className="flex items-center gap-2 text-sm text-slate-600 hover:text-indigo-600 transition-colors">
+              <button onClick={fetchCourses} disabled={loading} className="flex items-center gap-2 text-sm text-slate-600 hover:text-crimson-600 transition-colors">
                 <RefreshCw size={15} className={loading ? 'animate-spin' : ''} /> Refresh
               </button>
               {isAdmin && (
@@ -174,7 +174,7 @@ export default function ClassroomImport() {
                         </button>
                       )}
                       <button onClick={() => syncCourse(course.id)} disabled={isSyncing}
-                        className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 rounded-xl transition-colors">
+                        className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-white bg-crimson-600 hover:bg-crimson-700 disabled:opacity-60 rounded-xl transition-colors">
                         {isSyncing
                           ? <><RefreshCw size={14} className="animate-spin" /> Syncing…</>
                           : <><Download size={14} /> {course.imported ? 'Re-sync' : 'Import'}</>

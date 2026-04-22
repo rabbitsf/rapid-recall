@@ -45,25 +45,25 @@ export default function StudyCalendar({ logs, onUpdateLog }) {
   return (
     <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-4">
-        <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2"><Calendar size={20} className="text-indigo-600" /> Word Tracker</h3>
-        <span className="text-sm font-semibold bg-indigo-50 text-indigo-700 px-4 py-1.5 rounded-full">{monthData.name} Total: {monthData.total} mins</span>
+        <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2"><Calendar size={20} className="text-crimson-600" /> Word Tracker</h3>
+        <span className="text-sm font-semibold bg-crimson-50 text-crimson-700 px-4 py-1.5 rounded-full">{monthData.name} Total: {monthData.total} mins</span>
       </div>
       <div className="flex items-center gap-2">
-        <button onClick={() => setWeekOffset(w => w - 1)} className="p-3 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-full transition-colors touch-manipulation"><ChevronLeft size={20} /></button>
+        <button onClick={() => setWeekOffset(w => w - 1)} className="p-3 text-slate-400 hover:text-crimson-600 hover:bg-crimson-50 rounded-full transition-colors touch-manipulation"><ChevronLeft size={20} /></button>
         <div className="flex-1 flex justify-between items-center gap-1 overflow-x-auto pb-2">
           {days.map(day => {
             const mins = logs[day.dateString] || 0
             const active = mins > 0
             return (
-              <div key={day.dateString} onClick={() => openEdit(day)} className={`flex flex-col items-center min-w-[50px] sm:min-w-[60px] p-2 rounded-xl cursor-pointer transition-all border-2 touch-manipulation select-none ${active ? 'border-indigo-100 bg-indigo-50 hover:border-indigo-200' : 'border-transparent hover:bg-slate-50'}`}>
+              <div key={day.dateString} onClick={() => openEdit(day)} className={`flex flex-col items-center min-w-[50px] sm:min-w-[60px] p-2 rounded-xl cursor-pointer transition-all border-2 touch-manipulation select-none ${active ? 'border-crimson-100 bg-crimson-50 hover:border-crimson-200' : 'border-transparent hover:bg-slate-50'}`}>
                 <span className="text-xs font-semibold text-slate-400 mb-1">{day.dayName}</span>
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm mb-1 ${active ? 'bg-indigo-600 text-white shadow-sm' : 'bg-slate-100 text-slate-500'}`}>{day.dayNum}</div>
-                <span className={`text-xs font-bold ${active ? 'text-indigo-600' : 'text-slate-400'}`}>{mins > 0 ? `${mins}m` : '-'}</span>
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm mb-1 ${active ? 'bg-crimson-600 text-white shadow-sm' : 'bg-slate-100 text-slate-500'}`}>{day.dayNum}</div>
+                <span className={`text-xs font-bold ${active ? 'text-crimson-600' : 'text-slate-400'}`}>{mins > 0 ? `${mins}m` : '-'}</span>
               </div>
             )
           })}
         </div>
-        <button onClick={() => setWeekOffset(w => w + 1)} disabled={weekOffset >= 0} className={`p-3 rounded-full transition-colors touch-manipulation ${weekOffset >= 0 ? 'text-slate-200 cursor-not-allowed' : 'text-slate-400 hover:text-indigo-600 hover:bg-indigo-50'}`}><ChevronRight size={20} /></button>
+        <button onClick={() => setWeekOffset(w => w + 1)} disabled={weekOffset >= 0} className={`p-3 rounded-full transition-colors touch-manipulation ${weekOffset >= 0 ? 'text-slate-200 cursor-not-allowed' : 'text-slate-400 hover:text-crimson-600 hover:bg-crimson-50'}`}><ChevronRight size={20} /></button>
       </div>
 
       {editingDay && (
@@ -75,10 +75,10 @@ export default function StudyCalendar({ logs, onUpdateLog }) {
             </div>
             <p className="text-slate-500 mb-4 text-sm">Minutes practiced on <strong className="text-slate-700">{editingDay.dayName}, {editingDay.dateString}</strong>?</p>
             <input type="number" value={timeInput} onChange={e => setTimeInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && saveLog()}
-              placeholder="e.g. 30" className="w-full text-lg px-4 py-4 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all mb-6" autoFocus />
+              placeholder="e.g. 30" className="w-full text-lg px-4 py-4 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-crimson-500 focus:border-crimson-500 outline-none transition-all mb-6" autoFocus />
             <div className="flex gap-3">
               <button onClick={() => setEditingDay(null)} className="flex-1 py-3.5 rounded-xl font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors touch-manipulation">Cancel</button>
-              <button onClick={saveLog} className="flex-1 py-3.5 rounded-xl font-medium text-white bg-indigo-600 hover:bg-indigo-700 transition-colors shadow-sm touch-manipulation">Save</button>
+              <button onClick={saveLog} className="flex-1 py-3.5 rounded-xl font-medium text-white bg-crimson-600 hover:bg-crimson-700 transition-colors shadow-sm touch-manipulation">Save</button>
             </div>
           </div>
         </div>

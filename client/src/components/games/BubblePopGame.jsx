@@ -66,7 +66,7 @@ export default function BubblePopGame({ set, onBack, onCreateMissedSet }) {
         {missed.length > 0 && (
           <div className="mb-8 p-6 bg-slate-50 rounded-2xl border border-slate-200">
             <h3 className="font-bold text-slate-800 mb-2">Needs Practice ({missed.length})</h3>
-            <button onClick={() => onCreateMissedSet(missed)} className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl flex items-center justify-center gap-2 touch-manipulation"><Layers size={20} /> Create Practice Set</button>
+            <button onClick={() => onCreateMissedSet(missed)} className="w-full py-4 bg-crimson-600 hover:bg-crimson-700 text-white font-bold rounded-xl flex items-center justify-center gap-2 touch-manipulation"><Layers size={20} /> Create Practice Set</button>
           </div>
         )}
         <div className="flex gap-4">

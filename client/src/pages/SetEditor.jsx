@@ -65,7 +65,7 @@ export default function SetEditor() {
         <h2 className="text-2xl font-bold text-slate-800">{existing ? 'Edit Word Set' : 'Create New Set'}</h2>
         <div className="flex gap-3 w-full sm:w-auto">
           <button onClick={() => navigate('/')} className="flex-1 sm:flex-none px-5 py-3 rounded-xl font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors touch-manipulation">Cancel</button>
-          <button onClick={handleSave} disabled={saving} className="flex-1 sm:flex-none px-6 py-3 rounded-xl font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 transition-colors shadow-sm touch-manipulation">{saving ? 'Saving…' : 'Save Set'}</button>
+          <button onClick={handleSave} disabled={saving} className="flex-1 sm:flex-none px-6 py-3 rounded-xl font-medium text-white bg-crimson-600 hover:bg-crimson-700 disabled:opacity-60 transition-colors shadow-sm touch-manipulation">{saving ? 'Saving…' : 'Save Set'}</button>
         </div>
       </div>
 
@@ -75,28 +75,28 @@ export default function SetEditor() {
         <div>
           <label className="block text-sm font-semibold text-slate-700 mb-2">Set Title</label>
           <input type="text" value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g., Biology Chapter 1, French Verbs"
-            className="w-full text-lg px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all" />
+            className="w-full text-lg px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-crimson-500 focus:border-crimson-500 outline-none transition-all" />
         </div>
 
         <div className="space-y-4">
           <label className="block text-sm font-semibold text-slate-700">Cards</label>
           {cards.map((card, i) => (
-            <div key={card.id} className="group relative flex flex-col md:flex-row gap-4 p-4 rounded-2xl border border-slate-200 bg-white hover:border-indigo-200 transition-colors">
+            <div key={card.id} className="group relative flex flex-col md:flex-row gap-4 p-4 rounded-2xl border border-slate-200 bg-white hover:border-crimson-200 transition-colors">
               <div className="absolute -left-3 top-4 bg-slate-100 text-slate-500 text-xs font-bold px-2 py-1 rounded-full">{i + 1}</div>
               <input type="text" value={card.term} onChange={e => updateCard(card.id, 'term', e.target.value)} placeholder="Term"
-                className="flex-1 font-medium px-4 py-3 bg-slate-50 border-b-2 border-slate-200 focus:border-indigo-500 focus:bg-white outline-none transition-all rounded-t-lg" />
+                className="flex-1 font-medium px-4 py-3 bg-slate-50 border-b-2 border-slate-200 focus:border-crimson-500 focus:bg-white outline-none transition-all rounded-t-lg" />
               <input type="text" value={card.definition} onChange={e => updateCard(card.id, 'definition', e.target.value)} placeholder="Definition"
-                className="flex-1 px-4 py-3 bg-slate-50 border-b-2 border-slate-200 focus:border-indigo-500 focus:bg-white outline-none transition-all rounded-t-lg" />
+                className="flex-1 px-4 py-3 bg-slate-50 border-b-2 border-slate-200 focus:border-crimson-500 focus:bg-white outline-none transition-all rounded-t-lg" />
               <button onClick={() => removeCard(card.id)} className="p-4 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors touch-manipulation"><Trash2 size={20} /></button>
             </div>
           ))}
         </div>
 
         <div className="flex flex-col sm:flex-row gap-4">
-          <button onClick={addCard} className="flex-1 py-4 border-2 border-dashed border-slate-300 rounded-2xl text-slate-500 font-medium hover:border-indigo-400 hover:text-indigo-600 hover:bg-indigo-50/50 transition-all flex items-center justify-center gap-2 touch-manipulation">
+          <button onClick={addCard} className="flex-1 py-4 border-2 border-dashed border-slate-300 rounded-2xl text-slate-500 font-medium hover:border-crimson-400 hover:text-crimson-600 hover:bg-crimson-50/50 transition-all flex items-center justify-center gap-2 touch-manipulation">
             <Plus size={20} /> Add Card
           </button>
-          <button onClick={() => setShowImport(true)} className="flex-1 py-4 border-2 border-dashed border-indigo-200 bg-indigo-50/30 rounded-2xl text-indigo-600 font-medium hover:border-indigo-400 hover:bg-indigo-50 transition-all flex items-center justify-center gap-2 touch-manipulation">
+          <button onClick={() => setShowImport(true)} className="flex-1 py-4 border-2 border-dashed border-crimson-200 bg-crimson-50/30 rounded-2xl text-crimson-600 font-medium hover:border-crimson-400 hover:bg-crimson-50 transition-all flex items-center justify-center gap-2 touch-manipulation">
             <Upload size={20} /> Bulk Import
           </button>
         </div>
@@ -106,16 +106,16 @@ export default function SetEditor() {
         <div className="fixed inset-0 bg-slate-900/20 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-3xl p-6 shadow-xl max-w-2xl w-full animate-in zoom-in-95">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2"><Upload size={20} className="text-indigo-600" /> Bulk Import</h3>
+              <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2"><Upload size={20} className="text-crimson-600" /> Bulk Import</h3>
               <button onClick={() => setShowImport(false)} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full touch-manipulation"><X size={24} /></button>
             </div>
             <p className="text-slate-500 mb-4 text-sm">Paste from Excel, Google Sheets, or a text file. One card per line, term and definition separated by <strong>tab, comma, dash, or colon</strong>.</p>
             <textarea value={importText} onChange={e => setImportText(e.target.value)}
               placeholder={"Hola\tHello\nGato\tCat\nPerro\tDog"}
-              className="w-full h-48 p-4 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none mb-4 font-mono text-sm resize-none" />
+              className="w-full h-48 p-4 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-crimson-500 outline-none mb-4 font-mono text-sm resize-none" />
             <div className="flex justify-end gap-3">
               <button onClick={() => setShowImport(false)} className="px-5 py-3 rounded-xl text-slate-600 bg-slate-100 hover:bg-slate-200 font-medium touch-manipulation">Cancel</button>
-              <button onClick={processImport} className="px-6 py-3 rounded-xl text-white bg-indigo-600 hover:bg-indigo-700 font-medium shadow-sm touch-manipulation">Import Cards</button>
+              <button onClick={processImport} className="px-6 py-3 rounded-xl text-white bg-crimson-600 hover:bg-crimson-700 font-medium shadow-sm touch-manipulation">Import Cards</button>
             </div>
           </div>
         </div>

@@ -7,7 +7,7 @@ const ROLES = ['student', 'teacher', 'admin']
 const ROLE_BADGE = {
   admin:   'bg-rose-100 text-rose-700',
   teacher: 'bg-amber-100 text-amber-700',
-  student: 'bg-indigo-100 text-indigo-700',
+  student: 'bg-crimson-100 text-crimson-700',
 }
 
 function AddUserModal({ onClose, onCreate }) {
@@ -38,24 +38,24 @@ function AddUserModal({ onClose, onCreate }) {
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
             <input type="email" required value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
-              className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm" />
+              className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-crimson-500 focus:border-crimson-500 text-sm" />
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Display Name</label>
             <input type="text" required value={form.displayName} onChange={e => setForm(f => ({ ...f, displayName: e.target.value }))}
-              className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm" />
+              className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-crimson-500 focus:border-crimson-500 text-sm" />
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Role</label>
             <select value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value }))}
-              className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 text-sm bg-white">
+              className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-crimson-500 text-sm bg-white">
               {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
             </select>
           </div>
           {error && <p className="text-red-600 text-sm bg-red-50 px-4 py-2 rounded-xl">{error}</p>}
           <div className="flex gap-3 pt-2">
             <button type="button" onClick={onClose} className="flex-1 py-2.5 bg-slate-100 text-slate-700 font-medium rounded-xl text-sm">Cancel</button>
-            <button type="submit" disabled={saving} className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white font-medium rounded-xl text-sm">
+            <button type="submit" disabled={saving} className="flex-1 py-2.5 bg-crimson-600 hover:bg-crimson-700 disabled:opacity-60 text-white font-medium rounded-xl text-sm">
               {saving ? 'Adding…' : 'Add User'}
             </button>
           </div>
@@ -98,7 +98,7 @@ export default function AdminDashboard() {
         {[
           { label: 'Admins',   count: counts.admin,    icon: <ShieldCheck size={18} />,    cls: 'text-rose-600 bg-rose-50' },
           { label: 'Teachers', count: counts.teacher,  icon: <GraduationCap size={18} />,  cls: 'text-amber-600 bg-amber-50' },
-          { label: 'Students', count: counts.student,  icon: <BookOpen size={18} />,       cls: 'text-indigo-600 bg-indigo-50' },
+          { label: 'Students', count: counts.student,  icon: <BookOpen size={18} />,       cls: 'text-crimson-600 bg-crimson-50' },
           { label: 'Inactive', count: counts.inactive, icon: <UserX size={18} />,          cls: 'text-slate-500 bg-slate-100' },
         ].map(({ label, count, icon, cls }) => (
           <div key={label} className="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm">
@@ -113,8 +113,8 @@ export default function AdminDashboard() {
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
         <div className="p-4 border-b border-slate-100 flex gap-3 items-center">
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name or email…"
-            className="flex-1 px-4 py-2 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" />
-          <button onClick={() => setShowAdd(true)} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-xl text-sm shadow-sm transition-colors">
+            className="flex-1 px-4 py-2 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-crimson-500 focus:border-crimson-500" />
+          <button onClick={() => setShowAdd(true)} className="flex items-center gap-2 px-4 py-2 bg-crimson-600 hover:bg-crimson-700 text-white font-medium rounded-xl text-sm shadow-sm transition-colors">
             <Plus size={16} /> Add User
           </button>
         </div>
@@ -127,7 +127,7 @@ export default function AdminDashboard() {
           <div className="divide-y divide-slate-50">
             {filtered.map(u => (
               <div key={u.id} className={`flex items-center gap-4 px-4 py-3 transition-colors ${u.active ? 'hover:bg-slate-50' : 'opacity-50 bg-slate-50'}`}>
-                <div className="w-9 h-9 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-sm shrink-0">
+                <div className="w-9 h-9 rounded-full bg-crimson-100 flex items-center justify-center text-crimson-700 font-bold text-sm shrink-0">
                   {u.displayName?.[0]?.toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">

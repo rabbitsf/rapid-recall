@@ -54,7 +54,7 @@ export default function TypeGame({ set, onBack, onCreateMissedSet }) {
         {missed.length > 0 && (
           <div className="mb-8 p-6 bg-slate-50 rounded-2xl border border-slate-200">
             <h3 className="font-bold text-slate-800 mb-2">Needs Practice ({missed.length})</h3>
-            <button onClick={() => onCreateMissedSet(missed)} className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl flex items-center justify-center gap-2 touch-manipulation"><Layers size={20} /> Create Practice Set</button>
+            <button onClick={() => onCreateMissedSet(missed)} className="w-full py-4 bg-crimson-600 hover:bg-crimson-700 text-white font-bold rounded-xl flex items-center justify-center gap-2 touch-manipulation"><Layers size={20} /> Create Practice Set</button>
           </div>
         )}
         <div className="flex gap-4">
@@ -85,7 +85,7 @@ export default function TypeGame({ set, onBack, onCreateMissedSet }) {
       <div className="flex items-center gap-4 mb-8">
         <button onClick={onBack} className="p-3 bg-white rounded-full shadow-sm text-slate-500 shrink-0 touch-manipulation"><ArrowLeft size={20} /></button>
         <div className="flex-1 h-3 bg-slate-200 rounded-full overflow-hidden">
-          <div className="h-full bg-indigo-500 transition-all duration-500" style={{ width: `${(index / questions.length) * 100}%` }} />
+          <div className="h-full bg-crimson-500 transition-all duration-500" style={{ width: `${(index / questions.length) * 100}%` }} />
         </div>
         <span className="font-bold text-slate-500 text-sm shrink-0">{index + 1} / {questions.length}</span>
       </div>
@@ -101,7 +101,7 @@ export default function TypeGame({ set, onBack, onCreateMissedSet }) {
             type="text" value={input} onChange={e => setInput(e.target.value)} disabled={status !== 'typing'}
             placeholder="Type the exact term..." autoFocus autoCapitalize="none" autoCorrect="off" spellCheck="false" autoComplete="off"
             className={`w-full text-[16px] sm:text-xl p-5 sm:p-6 rounded-2xl border-2 outline-none transition-all ${
-              status === 'typing'    ? 'bg-white border-slate-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 text-slate-800'
+              status === 'typing'    ? 'bg-white border-slate-200 focus:border-crimson-500 focus:ring-4 focus:ring-crimson-500/10 text-slate-800'
             : status === 'correct'  ? 'bg-emerald-50 border-emerald-500 text-emerald-800'
             :                         'bg-red-50 border-red-500 text-red-800 shake'}`}
           />
@@ -109,7 +109,7 @@ export default function TypeGame({ set, onBack, onCreateMissedSet }) {
           {status === 'incorrect' && <XCircle      className="absolute right-6 top-1/2 -translate-y-1/2 text-red-500"     size={28} />}
         </div>
         {status === 'typing' && (
-          <button type="submit" disabled={!input.trim()} className="w-full mt-4 py-5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 text-white font-bold text-lg rounded-2xl shadow-sm transition-colors touch-manipulation">
+          <button type="submit" disabled={!input.trim()} className="w-full mt-4 py-5 bg-crimson-600 hover:bg-crimson-700 disabled:bg-slate-300 text-white font-bold text-lg rounded-2xl shadow-sm transition-colors touch-manipulation">
             Check Answer
           </button>
         )}

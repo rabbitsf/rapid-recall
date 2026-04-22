@@ -15,7 +15,7 @@ function RequireAuth({ children }) {
   const { user, loading } = useAuth()
   if (loading) return (
     <div className="min-h-[100dvh] bg-slate-50 flex flex-col items-center justify-center text-slate-500">
-      <RefreshCw className="animate-spin mb-4 text-indigo-600" size={32} />
+      <RefreshCw className="animate-spin mb-4 text-crimson-600" size={32} />
       <p className="font-medium">Loading...</p>
     </div>
   )

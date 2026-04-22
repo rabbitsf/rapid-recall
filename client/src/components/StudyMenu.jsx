@@ -10,7 +10,7 @@ import BubblePopGame from './games/BubblePopGame.jsx'
 const GAMES = [
   { id: 'flashcards', title: 'Flashcards', icon: BookOpen, color: 'blue', desc: 'Review at your own pace.' },
   { id: 'match', title: 'Match Game', icon: Zap, color: 'emerald', desc: 'Race to match terms with definitions.' },
-  { id: 'quiz', title: 'Practice Quiz', icon: CheckCircle2, color: 'purple', desc: 'Multiple choice questions.' },
+  { id: 'quiz', title: 'Practice Quiz', icon: CheckCircle2, color: 'gold', desc: 'Multiple choice questions.' },
   { id: 'type', title: 'Type It', icon: Keyboard, color: 'orange', desc: 'Read the definition, type the term.' },
   { id: 'bubble-pop', title: 'Bubble Pop', icon: Timer, color: 'cyan', desc: 'Type before the bubble pops!' },
 ]
@@ -54,7 +54,7 @@ export default function StudyMenu({ set, onBack, onCreateMissedSet }) {
 
   return (
     <div className="max-w-5xl mx-auto animate-in fade-in slide-in-from-bottom-8 duration-500">
-      <button onClick={onBack} className="flex items-center gap-2 text-slate-500 hover:text-indigo-600 mb-6 font-medium transition-colors w-fit p-2 touch-manipulation">
+      <button onClick={onBack} className="flex items-center gap-2 text-slate-500 hover:text-crimson-600 mb-6 font-medium transition-colors w-fit p-2 touch-manipulation">
         <ArrowLeft size={20} /> Back
       </button>
       <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-sm mb-8 text-center select-none">
