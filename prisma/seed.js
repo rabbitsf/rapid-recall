@@ -1,3 +1,16 @@
+import { readFileSync } from 'fs'
+import { fileURLToPath } from 'url'
+import { dirname, join } from 'path'
+
+// Load .env since this runs via plain node, not Prisma CLI
+try {
+  const envPath = join(dirname(fileURLToPath(import.meta.url)), '../.env')
+  for (const line of readFileSync(envPath, 'utf8').split('\n')) {
+    const m = line.match(/^\s*([^#=\s][^=]*?)\s*=\s*"?([^"]*)"?\s*$/)
+    if (m && !process.env[m[1]]) process.env[m[1]] = m[2]
+  }
+} catch {}
+
 import { PrismaClient } from '../server/node_modules/.prisma/client/index.js'
 
 const prisma = new PrismaClient()
