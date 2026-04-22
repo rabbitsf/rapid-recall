@@ -1,0 +1,165 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../server/node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  admin
+  teacher
+  student
+}
+
+model User {
+  id          String   @id @default(uuid())
+  googleId    String?  @unique @map("google_id")
+  email       String   @unique
+  displayName String   @map("display_name")
+  active      Boolean  @default(false)
+  photoUrl    String?  @map("photo_url")
+  role        Role     @default(student)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  classes           Class[]        @relation("TeacherClasses")
+  memberships       ClassMember[]
+  sets              WordSet[]
+  studyLogs         StudyLog[]
+  gameResults       GameResult[]
+  googleToken       GoogleToken?
+  classroomStudents ClassroomStudentMapping[]
+
+  @@map("users")
+}
+
+model GoogleToken {
+  id           String   @id @default(uuid())
+  userId       String   @unique @map("user_id")
+  accessToken  String   @map("access_token")
+  refreshToken String?  @map("refresh_token")
+  expiresAt    DateTime @map("expires_at")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("google_tokens")
+}
+
+model ClassroomSync {
+  id             String   @id @default(uuid())
+  googleCourseId String   @map("google_course_id")
+  classId        String   @map("class_id")
+  teacherId      String   @map("teacher_id")
+  lastSyncedAt   DateTime @default(now()) @map("last_synced_at")
+
+  class Class @relation(fields: [classId], references: [id], onDelete: Cascade)
+
+  @@unique([googleCourseId, teacherId])
+  @@map("classroom_syncs")
+}
+
+model ClassroomStudentMapping {
+  id           String @id @default(uuid())
+  googleUserId String @unique @map("google_user_id")
+  userId       String @map("user_id")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("classroom_student_mappings")
+}
+
+model Class {
+  id        String   @id @default(uuid())
+  name      String
+  teacherId String   @map("teacher_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  teacher          User            @relation("TeacherClasses", fields: [teacherId], references: [id])
+  members          ClassMember[]
+  shares           SetClassShare[]
+  classroomSyncs   ClassroomSync[]
+
+  @@map("classes")
+}
+
+model ClassMember {
+  classId   String   @map("class_id")
+  studentId String   @map("student_id")
+  joinedAt  DateTime @default(now()) @map("joined_at")
+
+  class   Class @relation(fields: [classId], references: [id], onDelete: Cascade)
+  student User  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@id([classId, studentId])
+  @@map("class_members")
+}
+
+model WordSet {
+  id        String   @id @default(uuid())
+  title     String
+  ownerId   String   @map("owner_id")
+  isPublic  Boolean  @default(false) @map("is_public")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  owner   User            @relation(fields: [ownerId], references: [id])
+  cards   Card[]
+  shares  SetClassShare[]
+  results GameResult[]
+
+  @@map("word_sets")
+}
+
+model Card {
+  id         String @id @default(uuid())
+  setId      String @map("set_id")
+  term       String
+  definition String
+  position   Int    @default(0)
+
+  set WordSet @relation(fields: [setId], references: [id], onDelete: Cascade)
+
+  @@map("cards")
+}
+
+model SetClassShare {
+  setId   String @map("set_id")
+  classId String @map("class_id")
+
+  set   WordSet @relation(fields: [setId], references: [id], onDelete: Cascade)
+  class Class   @relation(fields: [classId], references: [id], onDelete: Cascade)
+
+  @@id([setId, classId])
+  @@map("set_class_shares")
+}
+
+model StudyLog {
+  id      String   @id @default(uuid())
+  userId  String   @map("user_id")
+  date    DateTime @db.Date
+  minutes Int      @default(0)
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([userId, date])
+  @@map("study_logs")
+}
+
+model GameResult {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  setId       String   @map("set_id")
+  game        String
+  score       Int
+  total       Int
+  timeSpent   Int      @map("time_spent")
+  completedAt DateTime @default(now()) @map("completed_at")
+
+  user User    @relation(fields: [userId], references: [id])
+  set  WordSet @relation(fields: [setId], references: [id])
+
+  @@map("game_results")
+}
