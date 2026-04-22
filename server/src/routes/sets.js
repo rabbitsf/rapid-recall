@@ -33,12 +33,26 @@ router.get('/', requireAuth, async (req, res, next) => {
   } catch (err) { next(err) }
 })
 
+function validateCards(cards) {
+  if (!Array.isArray(cards) || cards.length < 2) return 'At least 2 cards required'
+  if (cards.length > 500) return 'Maximum 500 cards per set'
+  for (const c of cards) {
+    if (typeof c.term !== 'string' || typeof c.definition !== 'string') return 'Each card must have a string term and definition'
+    if (!c.term.trim() || !c.definition.trim()) return 'Card term and definition cannot be blank'
+    if (c.term.length > 500) return 'Card term must be 500 characters or fewer'
+    if (c.definition.length > 2000) return 'Card definition must be 2000 characters or fewer'
+  }
+  return null
+}
+
 // POST /api/sets — create a set (owner = current user)
 router.post('/', requireAuth, async (req, res, next) => {
   try {
     const { title, cards = [], isPublic = false } = req.body
     if (!title?.trim()) return res.status(400).json({ error: 'Title required' })
-    if (cards.length < 2) return res.status(400).json({ error: 'At least 2 cards required' })
+    if (title.length > 200) return res.status(400).json({ error: 'Title must be 200 characters or fewer' })
+    const cardError = validateCards(cards)
+    if (cardError) return res.status(400).json({ error: cardError })
 
     const set = await prisma.wordSet.create({
       data: {
@@ -68,6 +82,9 @@ router.put('/:id', requireAuth, async (req, res, next) => {
     if (set.ownerId !== req.user.id) return res.status(403).json({ error: 'Forbidden' })
 
     const { title, cards = [], isPublic } = req.body
+    if (title !== undefined && title.length > 200) return res.status(400).json({ error: 'Title must be 200 characters or fewer' })
+    const cardError = validateCards(cards)
+    if (cardError) return res.status(400).json({ error: cardError })
 
     await prisma.card.deleteMany({ where: { setId: set.id } })
 

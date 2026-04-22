@@ -4,7 +4,13 @@ import session from 'express-session'
 import connectPgSimple from 'connect-pg-simple'
 import helmet from 'helmet'
 import cors from 'cors'
+import rateLimit from 'express-rate-limit'
 import passport from './auth.js'
+
+if (!process.env.SESSION_SECRET || process.env.SESSION_SECRET.length < 32) {
+  console.error('FATAL: SESSION_SECRET must be at least 32 characters')
+  process.exit(1)
+}
 
 import authRoutes from './routes/auth.js'
 import setsRoutes from './routes/sets.js'
@@ -19,7 +25,19 @@ const app = express()
 app.set('trust proxy', 1) // required when running behind Apache/nginx reverse proxy
 const PgSession = connectPgSimple(session)
 
-app.use(helmet({ contentSecurityPolicy: false }))
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", 'https://hamlin.org', 'https://lh3.googleusercontent.com', 'data:'],
+      connectSrc: ["'self'"],
+      frameAncestors: ["'none'"],
+    },
+  },
+  hsts: { maxAge: 31536000, includeSubDomains: true },
+}))
 app.use(cors({ origin: process.env.CLIENT_URL, credentials: true }))
 app.use(express.json())
 
@@ -38,14 +56,17 @@ app.use(session({
 app.use(passport.initialize())
 app.use(passport.session())
 
-app.use('/auth', authRoutes)
-app.use('/api/sets', setsRoutes)
-app.use('/api/classes', classesRoutes)
-app.use('/api/study-logs', studyLogsRoutes)
-app.use('/api/game-results', gameResultsRoutes)
-app.use('/api/progress', progressRoutes)
-app.use('/api/users', usersRoutes)
-app.use('/api/classroom', classroomRoutes)
+const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, standardHeaders: true, legacyHeaders: false })
+const apiLimiter  = rateLimit({ windowMs: 15 * 60 * 1000, max: 100, standardHeaders: true, legacyHeaders: false })
+
+app.use('/auth', authLimiter, authRoutes)
+app.use('/api/sets', apiLimiter, setsRoutes)
+app.use('/api/classes', apiLimiter, classesRoutes)
+app.use('/api/study-logs', apiLimiter, studyLogsRoutes)
+app.use('/api/game-results', apiLimiter, gameResultsRoutes)
+app.use('/api/progress', apiLimiter, progressRoutes)
+app.use('/api/users', apiLimiter, usersRoutes)
+app.use('/api/classroom', apiLimiter, classroomRoutes)
 
 app.use((err, _req, res, _next) => {
   console.error(err)

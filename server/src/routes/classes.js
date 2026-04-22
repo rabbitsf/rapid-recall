@@ -29,6 +29,7 @@ router.post('/', requireTeacher, async (req, res, next) => {
   try {
     const { name } = req.body
     if (!name?.trim()) return res.status(400).json({ error: 'Class name required' })
+    if (name.length > 200) return res.status(400).json({ error: 'Class name must be 200 characters or fewer' })
 
     const cls = await prisma.class.create({
       data: { name: name.trim(), teacherId: req.user.id },
@@ -46,6 +47,7 @@ router.put('/:id', requireTeacher, async (req, res, next) => {
 
     const { name } = req.body
     if (!name?.trim()) return res.status(400).json({ error: 'Name required' })
+    if (name.length > 200) return res.status(400).json({ error: 'Class name must be 200 characters or fewer' })
 
     const updated = await prisma.class.update({
       where: { id: req.params.id },
