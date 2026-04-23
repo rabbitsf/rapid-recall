@@ -6,7 +6,7 @@ import { requireAuth } from '../middleware/requireAuth.js'
 const router = Router()
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
-const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
+const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
 
 // POST /api/ai/cards/:cardId/hint
 // Returns (and caches) an AI-generated hint for the term.
