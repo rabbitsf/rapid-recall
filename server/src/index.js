@@ -20,6 +20,7 @@ import gameResultsRoutes from './routes/gameResults.js'
 import progressRoutes from './routes/progress.js'
 import usersRoutes from './routes/users.js'
 import classroomRoutes from './routes/classroom.js'
+import aiRoutes from './routes/ai.js'
 
 const app = express()
 app.set('trust proxy', 1) // required when running behind Apache/nginx reverse proxy
@@ -31,7 +32,7 @@ app.use(helmet({
       defaultSrc: ["'self'"],
       scriptSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
-      imgSrc: ["'self'", 'https://hamlin.org', 'https://lh3.googleusercontent.com', 'data:'],
+      imgSrc: ["'self'", 'https://hamlin.org', 'https://lh3.googleusercontent.com', 'https://images.pexels.com', 'data:'],
       connectSrc: ["'self'"],
       frameAncestors: ["'none'"],
     },
@@ -67,6 +68,7 @@ app.use('/api/game-results', apiLimiter, gameResultsRoutes)
 app.use('/api/progress', apiLimiter, progressRoutes)
 app.use('/api/users', apiLimiter, usersRoutes)
 app.use('/api/classroom', apiLimiter, classroomRoutes)
+app.use('/api/ai', apiLimiter, aiRoutes)
 
 app.use((err, _req, res, _next) => {
   console.error(err)

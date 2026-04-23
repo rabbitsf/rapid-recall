@@ -86,6 +86,17 @@ router.put('/:id', requireAuth, async (req, res, next) => {
     const cardError = validateCards(cards)
     if (cardError) return res.status(400).json({ error: cardError })
 
+    // Carry over cached AI fields for cards whose term is unchanged
+    const existingCards = await prisma.card.findMany({ where: { setId: set.id } })
+    const aiByTerm = {}
+    for (const c of existingCards) {
+      aiByTerm[c.term.trim().toLowerCase()] = {
+        hint: c.hint,
+        imageUrl: c.imageUrl,
+        exampleSentence: c.exampleSentence,
+      }
+    }
+
     await prisma.card.deleteMany({ where: { setId: set.id } })
 
     const updated = await prisma.wordSet.update({
@@ -94,11 +105,17 @@ router.put('/:id', requireAuth, async (req, res, next) => {
         title: title?.trim() ?? set.title,
         isPublic: isPublic ?? set.isPublic,
         cards: {
-          create: cards.map((c, i) => ({
-            term: c.term.trim(),
-            definition: c.definition.trim(),
-            position: i,
-          })),
+          create: cards.map((c, i) => {
+            const ai = aiByTerm[c.term.trim().toLowerCase()] ?? {}
+            return {
+              term: c.term.trim(),
+              definition: c.definition.trim(),
+              position: i,
+              hint: ai.hint ?? null,
+              imageUrl: ai.imageUrl ?? null,
+              exampleSentence: ai.exampleSentence ?? null,
+            }
+          }),
         },
       },
       include: { cards: { orderBy: { position: 'asc' } } },

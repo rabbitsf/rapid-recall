@@ -114,11 +114,14 @@ model WordSet {
 }
 
 model Card {
-  id         String @id @default(uuid())
-  setId      String @map("set_id")
-  term       String
-  definition String
-  position   Int    @default(0)
+  id              String  @id @default(uuid())
+  setId           String  @map("set_id")
+  term            String
+  definition      String
+  position        Int     @default(0)
+  hint            String?
+  imageUrl        String? @map("image_url")
+  exampleSentence String? @map("example_sentence")
 
   set WordSet @relation(fields: [setId], references: [id], onDelete: Cascade)
 

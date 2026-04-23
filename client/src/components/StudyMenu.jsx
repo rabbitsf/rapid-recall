@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from 'react'
-import { ArrowLeft, BookOpen, Zap, CheckCircle2, Keyboard, Timer, Layers } from 'lucide-react'
+import { ArrowLeft, BookOpen, Zap, CheckCircle2, Keyboard, Timer, Layers, PenLine } from 'lucide-react'
 import { useStudyLogs } from '../hooks/useStudyLogs.js'
 import FlashcardsMode from './games/FlashcardsMode.jsx'
 import MatchGame from './games/MatchGame.jsx'
 import QuizGame from './games/QuizGame.jsx'
 import TypeGame from './games/TypeGame.jsx'
 import BubblePopGame from './games/BubblePopGame.jsx'
+import ApplicationsMode from './games/ApplicationsMode.jsx'
 
 const GAMES = [
   { id: 'flashcards', title: 'Flashcards', icon: BookOpen, color: 'blue', desc: 'Review at your own pace.' },
@@ -13,6 +14,7 @@ const GAMES = [
   { id: 'quiz', title: 'Practice Quiz', icon: CheckCircle2, color: 'gold', desc: 'Multiple choice questions.' },
   { id: 'type', title: 'Type It', icon: Keyboard, color: 'orange', desc: 'Read the definition, type the term.' },
   { id: 'bubble-pop', title: 'Bubble Pop', icon: Timer, color: 'cyan', desc: 'Type before the bubble pops!' },
+  { id: 'applications', title: 'Applications', icon: PenLine, color: 'purple', desc: 'Fill in the blank from an AI-generated sentence.' },
 ]
 
 function today() {
@@ -51,6 +53,7 @@ export default function StudyMenu({ set, onBack, onCreateMissedSet }) {
   if (game === 'quiz') return <QuizGame set={set} onBack={handleBack} onCreateMissedSet={handleCreateMissedSet} />
   if (game === 'type') return <TypeGame set={set} onBack={handleBack} onCreateMissedSet={handleCreateMissedSet} />
   if (game === 'bubble-pop') return <BubblePopGame set={set} onBack={handleBack} onCreateMissedSet={handleCreateMissedSet} />
+  if (game === 'applications') return <ApplicationsMode set={set} onBack={handleBack} onCreateMissedSet={handleCreateMissedSet} />
 
   return (
     <div className="max-w-5xl mx-auto animate-in fade-in slide-in-from-bottom-8 duration-500">
