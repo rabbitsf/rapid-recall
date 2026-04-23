@@ -159,7 +159,7 @@ export default function TeacherDashboard() {
               <div key={set.id} onClick={() => setActiveSet(set)} className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm hover:shadow-md hover:border-crimson-200 transition-all cursor-pointer group flex flex-col touch-manipulation">
                 <div className="flex justify-between items-start mb-4">
                   <h3 className="text-xl font-bold text-slate-800 group-hover:text-crimson-600 transition-colors line-clamp-2">{set.title}</h3>
-                  <div className="flex gap-1 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
+                  <div className="flex gap-1">
                     <button onClick={e => { e.stopPropagation(); navigate(`/sets/${set.id}/edit`) }} className="p-2 text-slate-400 hover:text-crimson-600 hover:bg-crimson-50 rounded-lg touch-manipulation"><Edit3 size={18} /></button>
                     <button onClick={e => handleDeleteSet(set.id, e)} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg touch-manipulation"><Trash2 size={18} /></button>
                   </div>
