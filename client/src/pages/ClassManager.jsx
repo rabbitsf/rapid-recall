@@ -10,7 +10,7 @@ export default function ClassManager() {
   const navigate = useNavigate()
   const { user } = useAuth()
   const { classes, addStudent, removeStudent, shareSet, unshareSet, refetch } = useClasses()
-  const { sets } = useSets()
+  const { sets, refetch: refetchSets } = useSets()
 
   const cls = classes.find(c => c.id === id)
   const mySets = sets.filter(s => s.ownerId === user.id)
@@ -55,6 +55,7 @@ export default function ClassManager() {
     if (sharedSetIds.has(setId)) await unshareSet(id, setId)
     else await shareSet(id, setId)
     refetch()
+    refetchSets()
   }
 
   return (
