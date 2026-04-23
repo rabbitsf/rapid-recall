@@ -1,20 +1,23 @@
 import { Router } from 'express'
-import { GoogleGenerativeAI } from '@google/generative-ai'
+import OpenAI from 'openai'
 import prisma from '../db.js'
 import { requireAuth } from '../middleware/requireAuth.js'
 
 const router = Router()
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
-const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
 
-async function callGemini(prompt) {
-  const result = await model.generateContent(prompt)
-  return result.response.text().trim()
+async function callAI(prompt) {
+  const chat = await openai.chat.completions.create({
+    model: 'gpt-4o-mini',
+    messages: [{ role: 'user', content: prompt }],
+    temperature: 0.7,
+  })
+  return chat.choices[0].message.content.trim()
 }
 
 function isRateLimit(err) {
-  return err.status === 429 || (err.message && err.message.includes('[429'))
+  return err.status === 429
 }
 
 // POST /api/ai/cards/:cardId/hint
@@ -24,7 +27,7 @@ router.post('/cards/:cardId/hint', requireAuth, async (req, res, next) => {
     if (!card) return res.status(404).json({ error: 'Card not found' })
     if (card.hint) return res.json({ hint: card.hint })
 
-    const hint = await callGemini(
+    const hint = await callAI(
       `Generate a one-sentence hint for the vocabulary word "${card.term}" which means "${card.definition}". ` +
       `The hint should help a student recall the word without directly stating its definition or using the word itself. ` +
       `Return only the hint sentence, no quotes or extra text.`
@@ -67,7 +70,7 @@ router.post('/cards/:cardId/sentence', requireAuth, async (req, res, next) => {
     if (!card) return res.status(404).json({ error: 'Card not found' })
     if (card.exampleSentence) return res.json({ exampleSentence: card.exampleSentence })
 
-    const exampleSentence = await callGemini(
+    const exampleSentence = await callAI(
       `Write one natural sentence that uses the vocabulary word "${card.term}" (meaning: "${card.definition}"). ` +
       `Replace the word "${card.term}" in the sentence with "___". ` +
       `Return only the sentence, no quotes or extra text.`
@@ -93,7 +96,7 @@ router.post('/sets/:setId/sentences', requireAuth, async (req, res, next) => {
     const missing = allCards.filter(c => !c.exampleSentence)
     for (const card of missing) {
       try {
-        const exampleSentence = await callGemini(
+        const exampleSentence = await callAI(
           `Write one natural sentence that uses the vocabulary word "${card.term}" (meaning: "${card.definition}"). ` +
           `Replace the word "${card.term}" in the sentence with "___". ` +
           `Return only the sentence, no quotes or extra text.`
