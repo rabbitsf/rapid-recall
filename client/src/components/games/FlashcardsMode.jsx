@@ -10,6 +10,7 @@ export default function FlashcardsMode({ set, onBack }) {
   // Per-card caches keyed by card id; seeded from already-generated DB values
   const [hints, setHints] = useState({})
   const [images, setImages] = useState({})
+  const [hintError, setHintError] = useState(false)
 
   const cards = set.cards
 
@@ -27,6 +28,7 @@ export default function FlashcardsMode({ set, onBack }) {
   const go = (dir) => {
     setFlipped(false)
     setShownHint(false)
+    setHintError(false)
     setTimeout(() => setIndex(i => (i + dir + cards.length) % cards.length), 150)
   }
 
@@ -45,11 +47,14 @@ export default function FlashcardsMode({ set, onBack }) {
     e.stopPropagation()
     if (currentHint) { setShownHint(h => !h); return }
     setHintLoading(true)
+    setHintError(false)
     try {
       const res = await fetch(`/api/ai/cards/${card.id}/hint`, { method: 'POST', credentials: 'include' })
       const data = await res.json()
       if (data.hint) { setHints(h => ({ ...h, [card.id]: data.hint })); setShownHint(true) }
-    } finally { setHintLoading(false) }
+      else setHintError(true)
+    } catch { setHintError(true) }
+    finally { setHintLoading(false) }
   }
 
   const fetchImage = async (e) => {
@@ -87,13 +92,15 @@ export default function FlashcardsMode({ set, onBack }) {
             disabled={hintLoading}
             title="Get a hint"
             className={`flex items-center gap-1.5 px-3 py-2 rounded-full shadow-sm text-sm font-medium transition-colors touch-manipulation ${
-              shownHint && currentHint
+              hintError
+                ? 'bg-red-50 text-red-500'
+                : shownHint && currentHint
                 ? 'bg-amber-100 text-amber-700'
                 : 'bg-white text-slate-500 hover:text-amber-600'
             } disabled:opacity-50`}
           >
             <Lightbulb size={16} />
-            {hintLoading ? 'Loading…' : 'Get a hint'}
+            {hintLoading ? 'Loading…' : hintError ? 'Try again' : 'Get a hint'}
           </button>
 
           {/* Show image button only when image hasn't been fetched yet */}

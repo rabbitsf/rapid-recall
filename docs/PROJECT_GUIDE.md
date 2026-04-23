@@ -87,6 +87,7 @@ quizlet/                          — monorepo root
           QuizGame.jsx
           TypeGame.jsx
           BubblePopGame.jsx
+          ApplicationsMode.jsx
       utils/
         shuffleArray.js          — CANONICAL: Fisher-Yates shuffle (all games import from here)
         confetti.js              — CANONICAL: launchConfetti() (all games import from here)
@@ -144,6 +145,11 @@ quizlet/                          — monorepo root
 | Classroom import UI | `client/src/pages/ClassroomImport.jsx` | Admin: connect/disconnect; teachers: course list + sync/re-sync |
 | Admin user hook | `client/src/hooks/useUsers.js` | Calls `/api/users`; used by AdminDashboard |
 | Express security config | `server/src/index.js` | trust proxy, rate limiters (express-rate-limit), Helmet CSP + HSTS, 127.0.0.1 binding, SESSION_SECRET check |
+| AI hint generation + caching | `server/src/routes/ai.js` | POST /api/ai/cards/:cardId/hint; Gemini 2.0 Flash; cached to Card.hint |
+| AI image lookup + caching | `server/src/routes/ai.js` | POST /api/ai/cards/:cardId/image; Pexels API; cached to Card.imageUrl |
+| AI sentence generation + caching | `server/src/routes/ai.js` | POST /api/ai/cards/:cardId/sentence + /sets/:setId/sentences (batch); Gemini; cached to Card.exampleSentence |
+| Flashcard audio | `client/src/components/games/FlashcardsMode.jsx` | Web Speech API (`speakTerm`); browser built-in; no API key |
+| Applications game mode | `client/src/components/games/ApplicationsMode.jsx` | Fill-in-the-blank; lazy per-card AI sentence generation; full term bank |
 | Site color theme | `client/tailwind.config.js` | `extend.colors`: `crimson` and `gold` scales — all UI uses these Tailwind classes |
 | Login page design | `client/src/pages/LoginPage.jsx` | Hamlin style: dark red radial gradient, white card, gold bar, school logo, crimson button |
 | Nav bar design | `client/src/components/Layout.jsx` | Dark crimson bar (`#8B1A1A`), crimson-to-gold gradient accent, Hamlin logo (white filter) |
@@ -168,6 +174,7 @@ quizlet/                          — monorepo root
 - **Study time logging**: Only `StudyMenu.jsx` writes to study logs via `useStudyLogs`. Game components call `saveGameResult()` only.
 - **API base URL**: Client hooks call relative `/api/...` paths; Vite proxy config in `client/vite.config.js` forwards to `http://localhost:3001`.
 - **Classroom token**: Only `server/src/google/classroom.js:getAdminClient` reads the admin's stored token. Route handlers must never fetch tokens directly.
+- **AI API calls**: All Gemini and Pexels calls go through `server/src/routes/ai.js` only. Client never calls Gemini or Pexels directly. API keys stay server-side only.
 - **Branding colors**: Defined once in `client/tailwind.config.js` `extend.colors` (crimson + gold). Never add inline hex color values to JSX except the Layout header `style=` override for the exact bar color (`#8B1A1A`).
 - **Touch-safe UI patterns**: Never use `lg:opacity-0 lg:group-hover:opacity-100` for interactive buttons — invisible on touch screens. Always keep edit/delete controls visible or use a menu.
 - **Production migrations**: Never run `prisma db push` on production. Always create a migration file and run `prisma migrate deploy`.

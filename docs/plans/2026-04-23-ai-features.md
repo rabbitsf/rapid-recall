@@ -1,6 +1,6 @@
 # AI-Powered Features (Flashcards + Applications Mode) — Implementation Plan
-# Progress: 11/14 tasks complete. Resume from Task 12.
-# Last updated: 2026-04-22
+# Progress: 14/14 tasks complete. DONE.
+# Last updated: 2026-04-23
 # Project: quizlet (Rapid Recall)
 
 ## Tasks
@@ -15,9 +15,9 @@
 - [x] Task 9:  client/src/components/games/FlashcardsMode.jsx — add image display (calls /api/ai/image/:cardId, shown on card front)
 - [x] Task 10: client/src/components/games/ApplicationsMode.jsx — new file: fill-in-the-blank game (Gemini sentences, full term bank)
 - [x] Task 11: client/src/components/StudyMenu.jsx — import ApplicationsMode, add to GAMES list, wire render branch
-- [ ] Task 12: docs/PROJECT_GUIDE.md — update Section 4 canonical table with new implementations
-- [ ] Task 13: Integration smoke test (dev server): hint, image, sentence generation, Applications game flow
-- [ ] Task 14: docs/CHANGELOG_AI.md — append final changelog entry
+- [x] Task 12: docs/PROJECT_GUIDE.md — update Section 4 canonical table with new implementations
+- [x] Task 13: Integration smoke test (dev server): hint, image, sentence generation, Applications game flow
+- [x] Task 14: docs/CHANGELOG_AI.md — append final changelog entry
 
 ---
 
