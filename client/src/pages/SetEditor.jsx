@@ -17,6 +17,8 @@ export default function SetEditor() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
   const fileInputRefs = useRef({})
+  const savedSetIdRef = useRef(null)          // ID of set auto-saved during image upload
+  const [pendingUploadIdx, setPendingUploadIdx] = useState(null)  // card index awaiting file picker
 
   useEffect(() => {
     if (existing) {
@@ -25,6 +27,16 @@ export default function SetEditor() {
       setCards(existing.cards)
     }
   }, [existing?.id])
+
+  // After auto-save replaces card IDs, open the file picker for the pending card
+  useEffect(() => {
+    if (pendingUploadIdx === null) return
+    const card = cards[pendingUploadIdx]
+    if (card?.id.includes('-') && fileInputRefs.current[card.id]) {
+      fileInputRefs.current[card.id].click()
+      setPendingUploadIdx(null)
+    }
+  }, [pendingUploadIdx, cards])
 
   const addCard = () => setCards(c => [...c, { id: Date.now().toString(), term: '', definition: '' }])
   const updateCard = (cid, field, val) => setCards(c => c.map(x => x.id === cid ? { ...x, [field]: val } : x))
@@ -57,6 +69,27 @@ export default function SetEditor() {
     } catch { setError('Image upload failed') }
   }
 
+  const handleImageButtonClick = async (card, i) => {
+    if (card.id.includes('-')) {
+      // Already saved — open picker directly
+      fileInputRefs.current[card.id]?.click()
+      return
+    }
+    // Unsaved card — auto-save first, then open picker
+    if (!title.trim()) { setError('Please enter a title before uploading images.'); return }
+    const valid = cards.filter(c => c.term.trim() && c.definition.trim())
+    if (valid.length < 2) { setError('Please add at least 2 complete cards before uploading images.'); return }
+    setSaving(true)
+    setError(null)
+    try {
+      const savedSet = await saveSet({ id: existing?.id ?? savedSetIdRef.current, title, cards: valid, isSpanish })
+      savedSetIdRef.current = savedSet.id
+      setCards(savedSet.cards)        // replaces temp IDs with real DB UUIDs
+      setPendingUploadIdx(i)          // useEffect will click the picker once DOM updates
+    } catch (err) { setError(err.message) }
+    finally { setSaving(false) }
+  }
+
   const handleSave = async () => {
     if (!title.trim()) return setError('Please enter a title.')
     const valid = cards.filter(c => c.term.trim() && c.definition.trim())
@@ -64,7 +97,7 @@ export default function SetEditor() {
     try {
       setSaving(true)
       setError(null)
-      await saveSet({ id: existing?.id, title, cards: valid, isSpanish })
+      await saveSet({ id: existing?.id ?? savedSetIdRef.current, title, cards: valid, isSpanish })
       navigate('/')
     } catch (err) {
       setError(err.message)
@@ -99,41 +132,29 @@ export default function SetEditor() {
 
         <div className="space-y-4">
           <label className="block text-sm font-semibold text-slate-700">Cards</label>
-          {cards.map((card, i) => {
-            const isSaved = card.id.includes('-')
-            return (
-              <div key={card.id} className="group relative flex flex-col md:flex-row gap-4 p-4 rounded-2xl border border-slate-200 bg-white hover:border-crimson-200 transition-colors">
-                <div className="absolute -left-3 top-4 bg-slate-100 text-slate-500 text-xs font-bold px-2 py-1 rounded-full">{i + 1}</div>
-                <input type="text" value={card.term} onChange={e => updateCard(card.id, 'term', e.target.value)} placeholder="Term"
-                  className="flex-1 font-medium px-4 py-3 bg-slate-50 border-b-2 border-slate-200 focus:border-crimson-500 focus:bg-white outline-none transition-all rounded-t-lg" />
-                <input type="text" value={card.definition} onChange={e => updateCard(card.id, 'definition', e.target.value)} placeholder="Definition"
-                  className="flex-1 px-4 py-3 bg-slate-50 border-b-2 border-slate-200 focus:border-crimson-500 focus:bg-white outline-none transition-all rounded-t-lg" />
-                <div className="flex items-center gap-2 shrink-0">
-                  {card.uploadedImageUrl
-                    ? <img src={card.uploadedImageUrl} alt="" className="w-12 h-12 rounded-lg object-cover border border-slate-200 shrink-0" />
-                    : null}
-                  {isSaved ? (
-                    <>
-                      <input type="file" accept="image/*" className="hidden"
-                        ref={el => { fileInputRefs.current[card.id] = el }}
-                        onChange={e => { const f = e.target.files[0]; if (f) handleImageUpload(card.id, f); e.target.value = '' }} />
-                      <button type="button" onClick={() => fileInputRefs.current[card.id]?.click()}
-                        title={card.uploadedImageUrl ? 'Replace image' : 'Upload image'}
-                        className="p-2 text-slate-400 hover:text-crimson-600 hover:bg-crimson-50 rounded-lg transition-colors touch-manipulation">
-                        <Image size={20} />
-                      </button>
-                    </>
-                  ) : (
-                    <button type="button" disabled title="Save set first to upload images"
-                      className="p-2 text-slate-200 rounded-lg cursor-not-allowed touch-manipulation">
-                      <Image size={20} />
-                    </button>
-                  )}
-                </div>
-                <button onClick={() => removeCard(card.id)} className="p-4 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors touch-manipulation"><Trash2 size={20} /></button>
+          {cards.map((card, i) => (
+            <div key={card.id} className="group relative flex flex-col md:flex-row gap-4 p-4 rounded-2xl border border-slate-200 bg-white hover:border-crimson-200 transition-colors">
+              <div className="absolute -left-3 top-4 bg-slate-100 text-slate-500 text-xs font-bold px-2 py-1 rounded-full">{i + 1}</div>
+              <input type="text" value={card.term} onChange={e => updateCard(card.id, 'term', e.target.value)} placeholder="Term"
+                className="flex-1 font-medium px-4 py-3 bg-slate-50 border-b-2 border-slate-200 focus:border-crimson-500 focus:bg-white outline-none transition-all rounded-t-lg" />
+              <input type="text" value={card.definition} onChange={e => updateCard(card.id, 'definition', e.target.value)} placeholder="Definition"
+                className="flex-1 px-4 py-3 bg-slate-50 border-b-2 border-slate-200 focus:border-crimson-500 focus:bg-white outline-none transition-all rounded-t-lg" />
+              <div className="flex items-center gap-2 shrink-0">
+                {card.uploadedImageUrl
+                  ? <img src={card.uploadedImageUrl} alt="" className="w-12 h-12 rounded-lg object-cover border border-slate-200 shrink-0" />
+                  : null}
+                <input type="file" accept="image/*" className="hidden"
+                  ref={el => { fileInputRefs.current[card.id] = el }}
+                  onChange={e => { const f = e.target.files[0]; if (f) handleImageUpload(card.id, f); e.target.value = '' }} />
+                <button type="button" onClick={() => handleImageButtonClick(card, i)}
+                  title={card.uploadedImageUrl ? 'Replace image' : 'Upload image'}
+                  className="p-2 text-slate-400 hover:text-crimson-600 hover:bg-crimson-50 rounded-lg transition-colors touch-manipulation">
+                  <Image size={20} />
+                </button>
               </div>
-            )
-          })}
+              <button onClick={() => removeCard(card.id)} className="p-4 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors touch-manipulation"><Trash2 size={20} /></button>
+            </div>
+          ))}
         </div>
 
         <div className="flex flex-col sm:flex-row gap-4">
