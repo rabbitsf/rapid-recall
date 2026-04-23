@@ -48,7 +48,7 @@ function validateCards(cards) {
 // POST /api/sets — create a set (owner = current user)
 router.post('/', requireAuth, async (req, res, next) => {
   try {
-    const { title, cards = [], isPublic = false } = req.body
+    const { title, cards = [], isPublic = false, isSpanish = false } = req.body
     if (!title?.trim()) return res.status(400).json({ error: 'Title required' })
     if (title.length > 200) return res.status(400).json({ error: 'Title must be 200 characters or fewer' })
     const cardError = validateCards(cards)
@@ -59,6 +59,7 @@ router.post('/', requireAuth, async (req, res, next) => {
         title: title.trim(),
         ownerId: req.user.id,
         isPublic,
+        isSpanish,
         cards: {
           create: cards.map((c, i) => ({
             term: c.term.trim(),
@@ -81,7 +82,7 @@ router.put('/:id', requireAuth, async (req, res, next) => {
     if (!set) return res.status(404).json({ error: 'Set not found' })
     if (set.ownerId !== req.user.id) return res.status(403).json({ error: 'Forbidden' })
 
-    const { title, cards = [], isPublic } = req.body
+    const { title, cards = [], isPublic, isSpanish } = req.body
     if (title !== undefined && title.length > 200) return res.status(400).json({ error: 'Title must be 200 characters or fewer' })
     const cardError = validateCards(cards)
     if (cardError) return res.status(400).json({ error: cardError })
@@ -94,6 +95,7 @@ router.put('/:id', requireAuth, async (req, res, next) => {
         hint: c.hint,
         imageUrl: c.imageUrl,
         exampleSentence: c.exampleSentence,
+        uploadedImageUrl: c.uploadedImageUrl,
       }
     }
 
@@ -104,6 +106,7 @@ router.put('/:id', requireAuth, async (req, res, next) => {
       data: {
         title: title?.trim() ?? set.title,
         isPublic: isPublic ?? set.isPublic,
+        isSpanish: isSpanish ?? set.isSpanish,
         cards: {
           create: cards.map((c, i) => {
             const ai = aiByTerm[c.term.trim().toLowerCase()] ?? {}
@@ -114,6 +117,7 @@ router.put('/:id', requireAuth, async (req, res, next) => {
               hint: ai.hint ?? null,
               imageUrl: ai.imageUrl ?? null,
               exampleSentence: ai.exampleSentence ?? null,
+              uploadedImageUrl: ai.uploadedImageUrl ?? null,
             }
           }),
         },

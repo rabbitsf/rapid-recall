@@ -103,6 +103,7 @@ model WordSet {
   title     String
   ownerId   String   @map("owner_id")
   isPublic  Boolean  @default(false) @map("is_public")
+  isSpanish Boolean  @default(false) @map("is_spanish")
   createdAt DateTime @default(now()) @map("created_at")
 
   owner   User            @relation(fields: [ownerId], references: [id])
@@ -119,9 +120,10 @@ model Card {
   term            String
   definition      String
   position        Int     @default(0)
-  hint            String?
-  imageUrl        String? @map("image_url")
-  exampleSentence String? @map("example_sentence")
+  hint             String?
+  imageUrl         String? @map("image_url")
+  exampleSentence  String? @map("example_sentence")
+  uploadedImageUrl String? @map("uploaded_image_url")
 
   set WordSet @relation(fields: [setId], references: [id], onDelete: Cascade)
 

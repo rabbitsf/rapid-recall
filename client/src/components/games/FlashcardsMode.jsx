@@ -18,8 +18,11 @@ export default function FlashcardsMode({ set, onBack }) {
     const h = {}, im = {}
     for (const c of cards) {
       if (c.hint) h[c.id] = c.hint
-      // imageUrl: null = not fetched yet; '' = fetched, none found; 'https://...' = has image
-      if (c.imageUrl !== null && c.imageUrl !== undefined) im[c.id] = c.imageUrl
+      if (c.uploadedImageUrl) {
+        im[c.id] = c.uploadedImageUrl  // uploaded image takes priority over AI-fetched
+      } else if (c.imageUrl !== null && c.imageUrl !== undefined) {
+        im[c.id] = c.imageUrl
+      }
     }
     setHints(h)
     setImages(im)
@@ -40,7 +43,9 @@ export default function FlashcardsMode({ set, onBack }) {
   const speakTerm = (e) => {
     e.stopPropagation()
     window.speechSynthesis.cancel()
-    window.speechSynthesis.speak(new SpeechSynthesisUtterance(card.term))
+    const utt = new SpeechSynthesisUtterance(card.term)
+    if (set.isSpanish) utt.lang = 'es-ES'
+    window.speechSynthesis.speak(utt)
   }
 
   const fetchHint = async (e) => {
@@ -69,6 +74,7 @@ export default function FlashcardsMode({ set, onBack }) {
   }
 
   const hasImage = currentImage && currentImage !== ''
+  const isUploadedImage = hasImage && !!card.uploadedImageUrl && currentImage === card.uploadedImageUrl
 
   return (
     <section className="max-w-3xl mx-auto flex flex-col items-center animate-in fade-in duration-500 select-none">
@@ -149,15 +155,17 @@ export default function FlashcardsMode({ set, onBack }) {
             {hasImage && (
               <div className="w-1/2 flex-shrink-0 relative">
                 <img src={currentImage} alt="" className="w-full h-full object-cover" />
-                <a
-                  href="https://www.pexels.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={e => e.stopPropagation()}
-                  className="absolute bottom-1.5 right-2 text-white/50 hover:text-white/80 text-[10px] transition-colors"
-                >
-                  Pexels
-                </a>
+                {!isUploadedImage && (
+                  <a
+                    href="https://www.pexels.com"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={e => e.stopPropagation()}
+                    className="absolute bottom-1.5 right-2 text-white/50 hover:text-white/80 text-[10px] transition-colors"
+                  >
+                    Pexels
+                  </a>
+                )}
               </div>
             )}
 

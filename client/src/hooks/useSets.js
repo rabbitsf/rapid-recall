@@ -22,8 +22,8 @@ export function useSets() {
 
   useEffect(() => { fetchSets() }, [fetchSets])
 
-  const saveSet = async ({ id, title, cards, isPublic = false }) => {
-    const body = JSON.stringify({ title, cards, isPublic })
+  const saveSet = async ({ id, title, cards, isPublic = false, isSpanish = false }) => {
+    const body = JSON.stringify({ title, cards, isPublic, isSpanish })
     const data = id
       ? await apiFetch(`/api/sets/${id}`, { method: 'PUT', body })
       : await apiFetch('/api/sets', { method: 'POST', body })

@@ -5,7 +5,11 @@ import connectPgSimple from 'connect-pg-simple'
 import helmet from 'helmet'
 import cors from 'cors'
 import rateLimit from 'express-rate-limit'
+import path from 'path'
+import { fileURLToPath } from 'url'
 import passport from './auth.js'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 if (!process.env.SESSION_SECRET || process.env.SESSION_SECRET.length < 32) {
   console.error('FATAL: SESSION_SECRET must be at least 32 characters')
@@ -21,6 +25,7 @@ import progressRoutes from './routes/progress.js'
 import usersRoutes from './routes/users.js'
 import classroomRoutes from './routes/classroom.js'
 import aiRoutes from './routes/ai.js'
+import uploadsRoutes from './routes/uploads.js'
 
 const app = express()
 app.set('trust proxy', 1) // required when running behind Apache/nginx reverse proxy
@@ -69,6 +74,8 @@ app.use('/api/progress', apiLimiter, progressRoutes)
 app.use('/api/users', apiLimiter, usersRoutes)
 app.use('/api/classroom', apiLimiter, classroomRoutes)
 app.use('/api/ai', apiLimiter, aiRoutes)
+app.use('/api/uploads', apiLimiter, uploadsRoutes)
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')))
 
 app.use((err, _req, res, _next) => {
   console.error(err)
