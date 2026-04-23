@@ -52,7 +52,7 @@ export default function FlashcardsMode({ set, onBack }) {
       const res = await fetch(`/api/ai/cards/${card.id}/hint`, { method: 'POST', credentials: 'include' })
       const data = await res.json()
       if (data.hint) { setHints(h => ({ ...h, [card.id]: data.hint })); setShownHint(true) }
-      else setHintError(true)
+      else setHintError(res.status === 429 ? 'rate_limit' : true)
     } catch { setHintError(true) }
     finally { setHintLoading(false) }
   }
@@ -100,7 +100,7 @@ export default function FlashcardsMode({ set, onBack }) {
             } disabled:opacity-50`}
           >
             <Lightbulb size={16} />
-            {hintLoading ? 'Loading…' : hintError ? 'Try again' : 'Get a hint'}
+            {hintLoading ? 'Loading…' : hintError === 'rate_limit' ? 'AI busy — wait ~1 min' : hintError ? 'Try again' : 'Get a hint'}
           </button>
 
           {/* Show image button only when image hasn't been fetched yet */}

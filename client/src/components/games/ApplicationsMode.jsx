@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { ArrowLeft, Trophy, Layers, RefreshCw, Loader2 } from 'lucide-react'
+import { ArrowLeft, Trophy, Layers, RefreshCw, Loader2, RotateCcw } from 'lucide-react'
 import { shuffleArray } from '../../utils/shuffleArray.js'
 import { launchConfetti } from '../../utils/confetti.js'
 import { useGameResults } from '../../hooks/useGameResults.js'
@@ -13,6 +13,7 @@ export default function ApplicationsMode({ set, onBack, onCreateMissedSet }) {
     return s
   })
   const [sentenceLoading, setSentenceLoading] = useState(false)
+  const [sentenceError, setSentenceError] = useState({}) // cardId → true if failed
   const [questions, setQuestions] = useState([])
   const [index, setIndex] = useState(0)
   const [selectedTerm, setSelectedTerm] = useState(null)
@@ -37,42 +38,35 @@ export default function ApplicationsMode({ set, onBack, onCreateMissedSet }) {
 
   useEffect(() => { init() }, [])
 
-  const fetchSentenceLazy = async (cardId) => {
+  const fetchSentence = async (cardId) => {
     if (fetchingRef.current.has(cardId)) return
     fetchingRef.current.add(cardId)
+    setSentenceLoading(true)
     try {
       const res = await fetch(`/api/ai/cards/${cardId}/sentence`, { method: 'POST', credentials: 'include' })
       const data = await res.json()
-      if (data.exampleSentence) setSentences(s => ({ ...s, [cardId]: data.exampleSentence }))
-    } catch { /* silent: falls back to definition prompt */ }
-    finally { fetchingRef.current.delete(cardId) }
+      if (data.exampleSentence) {
+        setSentences(s => ({ ...s, [cardId]: data.exampleSentence }))
+        setSentenceError(e => { const n = { ...e }; delete n[cardId]; return n })
+      } else {
+        setSentenceError(e => ({ ...e, [cardId]: true }))
+      }
+    } catch {
+      setSentenceError(e => ({ ...e, [cardId]: true }))
+    } finally {
+      fetchingRef.current.delete(cardId)
+      setSentenceLoading(false)
+    }
   }
 
-  // Fetch current card's sentence; pre-fetch next silently
+  // Fetch current card's sentence on demand — no pre-fetching to avoid rate limits
   useEffect(() => {
     if (!questions.length || index >= questions.length) return
     const current = questions[index]
-
-    if (!sentences[current.id]) {
-      setSentenceLoading(true)
-      if (!fetchingRef.current.has(current.id)) {
-        fetchSentenceLazy(current.id).finally(() => setSentenceLoading(false))
-      }
-      // else: already being pre-fetched — loading will dismiss via sentences effect below
-    } else {
-      setSentenceLoading(false)
+    if (!sentences[current.id] && !sentenceError[current.id]) {
+      fetchSentence(current.id)
     }
-
-    // Pre-fetch next card silently
-    const next = questions[index + 1]
-    if (next && !sentences[next.id]) fetchSentenceLazy(next.id)
   }, [index, questions])
-
-  // Dismiss loading when a pre-fetched sentence arrives
-  useEffect(() => {
-    if (!questions.length || index >= questions.length) return
-    if (sentences[questions[index].id]) setSentenceLoading(false)
-  }, [sentences])
 
   const selectTerm = (term) => {
     if (status !== 'answering') return
@@ -126,6 +120,7 @@ export default function ApplicationsMode({ set, onBack, onCreateMissedSet }) {
   const q = questions[index]
   const sentence = sentences[q.id] || null
   const parts = sentence ? sentence.split('___') : null
+  const hasError = sentenceError[q.id]
 
   return (
     <div className="max-w-2xl mx-auto animate-in fade-in">
@@ -142,7 +137,26 @@ export default function ApplicationsMode({ set, onBack, onCreateMissedSet }) {
       <div className="bg-white rounded-3xl p-8 sm:p-10 shadow-sm border border-slate-100 mb-8 min-h-[160px] flex flex-col items-center justify-center">
         <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-6 text-center">Fill in the blank</p>
         {sentenceLoading ? (
-          <Loader2 className="h-8 w-8 text-purple-500 animate-spin" />
+          <>
+            <Loader2 className="h-8 w-8 text-purple-500 animate-spin mb-2" />
+            <p className="text-slate-400 text-xs">Generating sentence…</p>
+          </>
+        ) : hasError ? (
+          <>
+            <p className="text-slate-500 text-sm mb-4 text-center">AI is busy — couldn't generate a sentence.</p>
+            <button
+              onClick={() => {
+                setSentenceError(e => { const n = { ...e }; delete n[q.id]; return n })
+                fetchSentence(q.id)
+              }}
+              className="flex items-center gap-2 px-4 py-2 bg-purple-100 text-purple-700 rounded-xl font-semibold text-sm mb-4 touch-manipulation"
+            >
+              <RotateCcw size={14} /> Retry
+            </button>
+            <p className="text-lg sm:text-xl text-slate-600 leading-relaxed text-center italic">
+              "{q.definition}"
+            </p>
+          </>
         ) : parts ? (
           <p className="text-xl sm:text-2xl text-slate-800 leading-relaxed text-center">
             {parts[0]}
@@ -151,14 +165,10 @@ export default function ApplicationsMode({ set, onBack, onCreateMissedSet }) {
             </span>
             {parts[1] ?? ''}
           </p>
-        ) : (
-          <p className="text-xl sm:text-2xl text-slate-800 leading-relaxed text-center">
-            Which term means: <span className="italic text-slate-600">"{q.definition}"</span>
-          </p>
-        )}
+        ) : null}
       </div>
 
-      {/* Term bank */}
+      {/* Term bank — shown even on error so game is still playable */}
       {!sentenceLoading && (
         <div>
           <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 text-center">Word Bank</p>

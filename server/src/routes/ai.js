@@ -8,19 +8,13 @@ const router = Router()
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
 const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
 
-// Retry once on 429 rate-limit errors with a 10-second backoff
 async function callGemini(prompt) {
-  try {
-    const result = await model.generateContent(prompt)
-    return result.response.text().trim()
-  } catch (err) {
-    if (err.status === 429) {
-      await new Promise(r => setTimeout(r, 10000))
-      const result = await model.generateContent(prompt)
-      return result.response.text().trim()
-    }
-    throw err
-  }
+  const result = await model.generateContent(prompt)
+  return result.response.text().trim()
+}
+
+function isRateLimit(err) {
+  return err.status === 429 || (err.message && err.message.includes('[429'))
 }
 
 // POST /api/ai/cards/:cardId/hint
@@ -37,7 +31,10 @@ router.post('/cards/:cardId/hint', requireAuth, async (req, res, next) => {
     )
     await prisma.card.update({ where: { id: card.id }, data: { hint } })
     res.json({ hint })
-  } catch (err) { next(err) }
+  } catch (err) {
+    if (isRateLimit(err)) return res.status(429).json({ error: 'rate_limit' })
+    next(err)
+  }
 })
 
 // POST /api/ai/cards/:cardId/image
@@ -77,7 +74,10 @@ router.post('/cards/:cardId/sentence', requireAuth, async (req, res, next) => {
     )
     await prisma.card.update({ where: { id: card.id }, data: { exampleSentence } })
     res.json({ exampleSentence })
-  } catch (err) { next(err) }
+  } catch (err) {
+    if (isRateLimit(err)) return res.status(429).json({ error: 'rate_limit' })
+    next(err)
+  }
 })
 
 // POST /api/ai/sets/:setId/sentences
