@@ -52,7 +52,7 @@ export default function StudentProgress() {
 
       {/* Student table */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="grid grid-cols-[1fr_auto_auto_auto] gap-4 px-6 py-3 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wide">
+        <div className="grid grid-cols-[1fr_8rem_7rem_2.5rem] gap-4 px-6 py-3 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wide">
           <span>Student</span>
           <span className="text-right">Practice Time</span>
           <span className="text-right">Games Played</span>
@@ -62,7 +62,7 @@ export default function StudentProgress() {
           <p className="text-center py-10 text-slate-400">No data yet.</p>
         ) : sorted.map(student => (
           <div key={student.id}>
-            <div className="grid grid-cols-[1fr_auto_auto_auto] gap-4 px-6 py-4 border-b border-slate-100 items-center hover:bg-slate-50 transition-colors">
+            <div className="grid grid-cols-[1fr_8rem_7rem_2.5rem] gap-4 px-6 py-4 border-b border-slate-100 items-center hover:bg-slate-50 transition-colors">
               <div className="flex items-center gap-3 min-w-0">
                 {student.photoUrl
                   ? <img src={student.photoUrl} alt="" className="w-9 h-9 rounded-full shrink-0" />
