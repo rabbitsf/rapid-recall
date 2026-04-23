@@ -21,6 +21,8 @@ Tech stack:
 - PostgreSQL (v18, Homebrew) via Prisma ORM
 - Google OAuth 2.0 via passport-google-oauth20 + express-session
 - Session store: connect-pg-simple (sessions in PostgreSQL)
+- Production: Ubuntu 22, Apache reverse proxy, PM2, Let's Encrypt SSL (`rapid-recall.hamlin.org`)
+- GitHub: git@github.com:rabbitsf/rapid-recall.git
 
 ---
 
@@ -30,24 +32,29 @@ Tech stack:
 quizlet/                          — monorepo root
   prisma/
     schema.prisma                 — CANONICAL: full data model + Prisma generator config
+    seed.js                       — seeds first admin (SEED_ADMIN_EMAIL env var); requires dotenv
+    migrations/                   — all migrations committed here; deploy with prisma migrate deploy
   server/
     src/
-      index.js                   — Express entry point (mounts all routes)
+      index.js                   — Express entry point: mounts all routes; trust proxy, rate limiters,
+                                   Helmet (CSP + HSTS), 127.0.0.1 binding, SESSION_SECRET length check
       db.js                      — CANONICAL: PrismaClient singleton (single import point)
       auth.js                    — CANONICAL: passport strategy + session setup
       middleware/
         requireAuth.js           — auth guard middleware (requireAuth, requireTeacher, requireAdmin)
       routes/
         auth.js                  — /auth/google, /callback, /auth/me, /auth/logout
-        sets.js                  — GET/POST/PUT/DELETE /api/sets
-        classes.js               — GET/POST /api/classes + members + shares
+        sets.js                  — GET/POST/PUT/DELETE /api/sets (input length limits)
+        classes.js               — GET/POST /api/classes + members + shares (input length limits)
         studyLogs.js             — GET/PUT /api/study-logs/:date
-        gameResults.js           — POST /api/game-results
+        gameResults.js           — POST /api/game-results (validates set access before writing)
         progress.js              — GET /api/progress/class/:classId (teacher only)
         users.js                 — GET/POST/PUT /api/users (admin only)
-        classroom.js             — GET /classroom/connect|callback|courses; POST /classroom/sync/:courseId
+        classroom.js             — GET /classroom/status|connect|callback|courses;
+                                   POST /classroom/sync/:courseId; DELETE /classroom/disconnect
       google/
-        classroom.js             — CANONICAL: Classroom API wrappers (listCourses, listStudents)
+        classroom.js             — CANONICAL: Classroom API wrappers (shared admin token);
+                                   getAdminClient, getAdminConnectionStatus, listCourses, listStudents
         sync.js                  — CANONICAL: syncCourse() — upserts Class + imports students
   client/
     src/
@@ -62,7 +69,7 @@ quizlet/                          — monorepo root
         useGameResults.js        — CANONICAL: save/read game results via API
         useUsers.js              — CANONICAL: admin user management (calls /api/users)
       pages/
-        LoginPage.jsx            — Google sign-in screen
+        LoginPage.jsx            — Google sign-in screen (Hamlin style: dark red gradient, white card, gold bar)
         TeacherDashboard.jsx     — teacher landing (class mgmt + progress links + Classroom import button)
         StudentDashboard.jsx     — student landing (my sets + class sets tabs)
         ClassManager.jsx         — create classes, add students, share sets
@@ -71,7 +78,7 @@ quizlet/                          — monorepo root
         AdminDashboard.jsx       — admin-only: user list, add, toggle active, change role
         ClassroomImport.jsx      — teacher: OAuth connect + course list + sync UI
       components/
-        Layout.jsx               — shared nav bar (logo, user, role badge, sign-out)
+        Layout.jsx               — shared nav bar (dark crimson header, crimson-to-gold accent, Hamlin logo)
         StudyCalendar.jsx        — weekly study time heatmap
         StudyMenu.jsx            — game picker + session timer (auto-logs on exit)
         games/
@@ -131,11 +138,15 @@ quizlet/                          — monorepo root
 | Auth guard (server) | `server/src/middleware/requireAuth.js` | `requireAuth`, `requireTeacher` (teacher or admin), `requireAdmin` (admin only) |
 | Admin user CRUD | `server/src/routes/users.js` | GET/POST/PUT `/api/users`; requires `requireAdmin` |
 | Classroom OAuth + sync trigger | `server/src/routes/classroom.js` | GET `/classroom/connect`, `/callback`, `/courses`; POST `/classroom/sync/:courseId` |
-| Classroom API wrappers | `server/src/google/classroom.js` | `getAuthUrl`, `exchangeCode`, `listCourses`, `listStudents` |
-| Course sync logic | `server/src/google/sync.js` | `syncCourse(teacher, courseId)` — upserts Class, imports students as active Users |
+| Classroom API wrappers | `server/src/google/classroom.js` | `getAdminClient`, `getAdminConnectionStatus`, `listCourses`, `listStudents` — shared admin token |
+| Course sync logic | `server/src/google/sync.js` | `syncCourse(courseId)` — upserts Class, imports students as active Users |
 | Admin dashboard UI | `client/src/pages/AdminDashboard.jsx` | User management UI (list, add, toggle active, change role) |
-| Classroom import UI | `client/src/pages/ClassroomImport.jsx` | Connect flow + course list + sync/re-sync UI |
+| Classroom import UI | `client/src/pages/ClassroomImport.jsx` | Admin: connect/disconnect; teachers: course list + sync/re-sync |
 | Admin user hook | `client/src/hooks/useUsers.js` | Calls `/api/users`; used by AdminDashboard |
+| Express security config | `server/src/index.js` | trust proxy, rate limiters (express-rate-limit), Helmet CSP + HSTS, 127.0.0.1 binding, SESSION_SECRET check |
+| Site color theme | `client/tailwind.config.js` | `extend.colors`: `crimson` and `gold` scales — all UI uses these Tailwind classes |
+| Login page design | `client/src/pages/LoginPage.jsx` | Hamlin style: dark red radial gradient, white card, gold bar, school logo, crimson button |
+| Nav bar design | `client/src/components/Layout.jsx` | Dark crimson bar (`#8B1A1A`), crimson-to-gold gradient accent, Hamlin logo (white filter) |
 
 ---
 
@@ -156,6 +167,10 @@ quizlet/                          — monorepo root
 - **Confetti**: All game components import `launchConfetti` from `client/src/utils/confetti.js`. Never re-implement inline.
 - **Study time logging**: Only `StudyMenu.jsx` writes to study logs via `useStudyLogs`. Game components call `saveGameResult()` only.
 - **API base URL**: Client hooks call relative `/api/...` paths; Vite proxy config in `client/vite.config.js` forwards to `http://localhost:3001`.
+- **Classroom token**: Only `server/src/google/classroom.js:getAdminClient` reads the admin's stored token. Route handlers must never fetch tokens directly.
+- **Branding colors**: Defined once in `client/tailwind.config.js` `extend.colors` (crimson + gold). Never add inline hex color values to JSX except the Layout header `style=` override for the exact bar color (`#8B1A1A`).
+- **Touch-safe UI patterns**: Never use `lg:opacity-0 lg:group-hover:opacity-100` for interactive buttons — invisible on touch screens. Always keep edit/delete controls visible or use a menu.
+- **Production migrations**: Never run `prisma db push` on production. Always create a migration file and run `prisma migrate deploy`.
 
 ---
 
@@ -188,3 +203,23 @@ quizlet/                          — monorepo root
 - Run SQL: `UPDATE users SET role = 'teacher' WHERE email = '...'`
 - Or via psql: `\c rapidrecall` then update
 - `AuthContext` picks up the new role on next sign-in via `/auth/me`
+
+### Deploying a schema change to production
+1. Edit `prisma/schema.prisma`
+2. Run `npm run prisma:migrate` locally to create the migration file under `prisma/migrations/`
+3. Commit the migration file along with the schema change
+4. On the production server: `git pull && cd server && npx prisma migrate deploy`
+5. Restart PM2: `pm2 restart rapid-recall`
+6. Never run `prisma db push` on production
+
+### Changing the site color theme
+1. Update `client/tailwind.config.js` `extend.colors` (crimson/gold scales)
+2. All JSX files use Tailwind utility classes (`bg-crimson-700`, `text-gold-400`, etc.)
+3. The only permitted inline style hex is Layout.jsx header bar (`#8B1A1A`) — keeps the exact brand color outside Tailwind's purge scope
+4. Rebuild client: `npm run build` in `client/`
+
+### Adding or rotating a production secret
+1. SSH to server, edit `/var/www/rapid-recall/server/.env`
+2. Ensure `SESSION_SECRET` is at least 32 characters (server exits on startup if too short)
+3. Restart: `pm2 restart rapid-recall`
+4. Verify: `pm2 logs rapid-recall --lines 20`
