@@ -145,11 +145,14 @@ quizlet/                          — monorepo root
 | Classroom import UI | `client/src/pages/ClassroomImport.jsx` | Admin: connect/disconnect; teachers: course list + sync/re-sync |
 | Admin user hook | `client/src/hooks/useUsers.js` | Calls `/api/users`; used by AdminDashboard |
 | Express security config | `server/src/index.js` | trust proxy, rate limiters (express-rate-limit), Helmet CSP + HSTS, 127.0.0.1 binding, SESSION_SECRET check |
-| AI hint generation + caching | `server/src/routes/ai.js` | POST /api/ai/cards/:cardId/hint; Gemini 2.0 Flash; cached to Card.hint |
+| AI hint generation + caching | `server/src/routes/ai.js` | POST /api/ai/cards/:cardId/hint; OpenAI gpt-4o-mini; cached to Card.hint |
 | AI image lookup + caching | `server/src/routes/ai.js` | POST /api/ai/cards/:cardId/image; Pexels API; cached to Card.imageUrl |
-| AI sentence generation + caching | `server/src/routes/ai.js` | POST /api/ai/cards/:cardId/sentence + /sets/:setId/sentences (batch); Gemini; cached to Card.exampleSentence |
-| Flashcard audio | `client/src/components/games/FlashcardsMode.jsx` | Web Speech API (`speakTerm`); browser built-in; no API key |
+| AI sentence generation + caching | `server/src/routes/ai.js` | POST /api/ai/cards/:cardId/sentence + /sets/:setId/sentences (batch); OpenAI; cached to Card.exampleSentence |
+| Flashcard audio | `client/src/components/games/FlashcardsMode.jsx` | Web Speech API (`speakTerm`); es-ES if set.isSpanish; browser built-in; no API key |
 | Applications game mode | `client/src/components/games/ApplicationsMode.jsx` | Fill-in-the-blank; lazy per-card AI sentence generation; full term bank |
+| Per-card image upload | `server/src/routes/uploads.js` | POST /api/cards/:cardId/upload; multer (5 MB limit, LIMIT_FILE_SIZE → 400); ownership check; saves to uploads/ |
+| Uploaded image serving | `server/src/index.js` | express.static('uploads/') at /uploads/; Apache must proxy /uploads/ to Node |
+| Spanish TTS flag | `client/src/components/games/FlashcardsMode.jsx:speakTerm` | set.isSpanish → lang es-ES; default en-US |
 | Site color theme | `client/tailwind.config.js` | `extend.colors`: `crimson` and `gold` scales — all UI uses these Tailwind classes |
 | Login page design | `client/src/pages/LoginPage.jsx` | Hamlin style: dark red radial gradient, white card, gold bar, school logo, crimson button |
 | Nav bar design | `client/src/components/Layout.jsx` | Dark crimson bar (`#8B1A1A`), crimson-to-gold gradient accent, Hamlin logo (white filter) |
@@ -174,7 +177,9 @@ quizlet/                          — monorepo root
 - **Study time logging**: Only `StudyMenu.jsx` writes to study logs via `useStudyLogs`. Game components call `saveGameResult()` only.
 - **API base URL**: Client hooks call relative `/api/...` paths; Vite proxy config in `client/vite.config.js` forwards to `http://localhost:3001`.
 - **Classroom token**: Only `server/src/google/classroom.js:getAdminClient` reads the admin's stored token. Route handlers must never fetch tokens directly.
-- **AI API calls**: All Gemini and Pexels calls go through `server/src/routes/ai.js` only. Client never calls Gemini or Pexels directly. API keys stay server-side only.
+- **AI API calls**: All OpenAI and Pexels calls go through `server/src/routes/ai.js` only. Client never calls OpenAI or Pexels directly. API keys stay server-side only.
+- **Temp card IDs in SetEditor**: Unsaved cards use `${Date.now()}_${i}` (underscore separator). The upload route checks `card.id.includes('-')` to detect unsaved cards — never use a dash as separator in temp IDs or uploads will be silently skipped.
+- **Apache /uploads/ proxy**: The production Apache vhost must proxy `/uploads/` to Node (`ProxyPass /uploads/ http://localhost:3004/uploads/`). Without it, Apache serves from `client/dist/` and all uploaded images 404. This is NOT in git — must be added manually to the vhost config on every new server.
 - **Branding colors**: Defined once in `client/tailwind.config.js` `extend.colors` (crimson + gold). Never add inline hex color values to JSX except the Layout header `style=` override for the exact bar color (`#8B1A1A`).
 - **Touch-safe UI patterns**: Never use `lg:opacity-0 lg:group-hover:opacity-100` for interactive buttons — invisible on touch screens. Always keep edit/delete controls visible or use a menu.
 - **Production migrations**: Never run `prisma db push` on production. Always create a migration file and run `prisma migrate deploy`.

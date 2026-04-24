@@ -235,3 +235,28 @@ Append-only audit log of all AI-assisted changes.
 - iPad compatibility: never use hover-only Tailwind patterns (`lg:opacity-0 lg:group-hover:opacity-100`) for interactive buttons
 
 ---
+
+## [2026-04-23] - Image Upload Debugging (Production Fixes)
+
+### Changes
+- `client/src/pages/SetEditor.jsx`: changed bulk-import temp card ID separator from `-` to `_` (dash triggered the unsaved-card detection check, bypassing auto-save before upload); replaced `pendingUploadCardId` state + useEffect with `flushSync(() => setCards(savedSet.cards))` to guarantee refs exist before clicking file input
+- `server/src/routes/uploads.js`: wrapped `upload.single` in custom middleware to catch `MulterError` with code `LIMIT_FILE_SIZE` and return 400 instead of propagating to generic 500 handler
+- Apache VirtualHost (production only, not in git): added `ProxyPass /uploads/ http://localhost:3004/uploads/` and `ProxyPassReverse` — without this Apache served /uploads/ from client/dist/ and all uploaded thumbnails 404'd
+
+### Files Affected
+- `client/src/pages/SetEditor.jsx`
+- `server/src/routes/uploads.js`
+- Apache VirtualHost config (production server only, not in repo)
+
+### Canonical Implementations
+- Per-card image upload (multer + LIMIT_FILE_SIZE → 400): `server/src/routes/uploads.js`
+- Uploaded image serving (/uploads/ static + Apache proxy): `server/src/index.js`
+- Spanish TTS flag (isSpanish → es-ES): `client/src/components/games/FlashcardsMode.jsx:speakTerm`
+
+### Key Decisions
+- Unsaved card detection: `card.id.includes('-')` is the guard — temp IDs MUST use `_` separator, never `-`
+- Apache /uploads/ proxy is NOT in git; must be manually added to vhost on every new server deployment
+- flushSync required when reading DOM refs immediately after a React state update (file input .click())
+- MulterError LIMIT_FILE_SIZE must be caught in route middleware, not the global error handler, to return 400
+
+---

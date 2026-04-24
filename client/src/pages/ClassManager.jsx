@@ -11,12 +11,15 @@ function BulkAddStudentsModal({ onClose, onBulkAdd }) {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
-  const emails = text.split('\n').map(l => l.trim()).filter(Boolean)
+  const entries = text.split('\n').map(line => {
+    const [rawEmail, ...nameParts] = line.split(',')
+    return { email: rawEmail?.trim(), displayName: nameParts.join(',').trim() }
+  }).filter(e => e.email)
 
   const handleSubmit = async () => {
-    if (!emails.length) return
+    if (!entries.length) return
     setSaving(true); setError('')
-    try { setResults(await onBulkAdd(emails)) }
+    try { setResults(await onBulkAdd(entries)) }
     catch (err) { setError(err.message) }
     finally { setSaving(false) }
   }
@@ -31,23 +34,30 @@ function BulkAddStudentsModal({ onClose, onBulkAdd }) {
 
         {!results ? (
           <>
-            <p className="text-sm text-slate-500 mb-3">One student email per line. Students must have signed in to the app at least once.</p>
+            <p className="text-sm text-slate-500 mb-1">One student per line: <span className="font-mono text-slate-700">email, Display Name</span></p>
+            <p className="text-xs text-slate-400 mb-3">Each email is checked for an existing account. If found, the student is enrolled. If not found, a new account is created with the display name provided.</p>
             <textarea value={text} onChange={e => setText(e.target.value)} rows={10}
-              placeholder={"alice@school.org\nbob@school.org\ncarol@school.org"}
+              placeholder={"alice@school.org, Alice Smith\nbob@school.org, Bob Jones\ncarol@school.org, Carol Lee"}
               className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm font-mono outline-none focus:ring-2 focus:ring-crimson-500 resize-none mb-2" />
-            <p className="text-xs text-slate-400 mb-4">{emails.length} email{emails.length !== 1 ? 's' : ''} entered</p>
+            <p className="text-xs text-slate-400 mb-4">{entries.length} student{entries.length !== 1 ? 's' : ''} entered</p>
             {error && <p className="text-red-600 text-sm bg-red-50 px-4 py-2 rounded-xl mb-3">{error}</p>}
             <div className="flex gap-3">
               <button onClick={onClose} className="flex-1 py-2.5 bg-slate-100 text-slate-700 font-medium rounded-xl text-sm">Cancel</button>
-              <button onClick={handleSubmit} disabled={saving || !emails.length}
+              <button onClick={handleSubmit} disabled={saving || !entries.length}
                 className="flex-1 py-2.5 bg-crimson-600 hover:bg-crimson-700 disabled:opacity-60 text-white font-medium rounded-xl text-sm">
-                {saving ? 'Adding…' : `Add ${emails.length} Student${emails.length !== 1 ? 's' : ''}`}
+                {saving ? 'Adding…' : `Add ${entries.length} Student${entries.length !== 1 ? 's' : ''}`}
               </button>
             </div>
           </>
         ) : (
           <>
             <div className="space-y-3 mb-5">
+              {results.created?.length > 0 && (
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                  <p className="text-sm font-semibold text-blue-700 mb-2">{results.created.length} new account{results.created.length !== 1 ? 's' : ''} created &amp; enrolled</p>
+                  <ul className="text-xs text-blue-600 space-y-0.5">{results.created.map(e => <li key={e}>{e}</li>)}</ul>
+                </div>
+              )}
               {results.added.length > 0 && (
                 <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4">
                   <p className="text-sm font-semibold text-emerald-700 mb-2">{results.added.length} added successfully</p>
@@ -62,7 +72,7 @@ function BulkAddStudentsModal({ onClose, onBulkAdd }) {
               )}
               {results.notFound.length > 0 && (
                 <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-                  <p className="text-sm font-semibold text-amber-700 mb-2">{results.notFound.length} not found — haven't signed in yet</p>
+                  <p className="text-sm font-semibold text-amber-700 mb-2">{results.notFound.length} not found — add a display name to create</p>
                   <ul className="text-xs text-amber-600 space-y-0.5">{results.notFound.map(e => <li key={e}>{e}</li>)}</ul>
                 </div>
               )}
@@ -92,6 +102,7 @@ export default function ClassManager() {
   const mySets = sets.filter(s => s.ownerId === user.id)
 
   const [email, setEmail] = useState('')
+  const [displayName, setDisplayName] = useState('')
   const [addMsg, setAddMsg] = useState(null)
   const [addError, setAddError] = useState(null)
   const [adding, setAdding] = useState(false)
@@ -113,9 +124,9 @@ export default function ClassManager() {
     if (!email.trim()) return
     try {
       setAdding(true); setAddMsg(null); setAddError(null)
-      const res = await addStudent(id, email.trim())
+      const res = await addStudent(id, email.trim(), displayName.trim())
       setAddMsg(`Added ${res.student.displayName} successfully.`)
-      setEmail('')
+      setEmail(''); setDisplayName('')
       refetch()
     } catch (err) {
       setAddError(err.message)
@@ -135,8 +146,8 @@ export default function ClassManager() {
     refetchSets()
   }
 
-  const handleBulkAdd = async (emails) => {
-    const result = await bulkAddStudents(id, emails)
+  const handleBulkAdd = async (entries) => {
+    const result = await bulkAddStudents(id, entries)
     refetch()
     return result
   }
@@ -161,16 +172,20 @@ export default function ClassManager() {
             <Users size={15} /> Bulk Add
           </button>
         </div>
-        <form onSubmit={handleAddStudent} className="flex gap-3">
-          <input value={email} onChange={e => setEmail(e.target.value)} type="email" placeholder="student@school.edu"
-            className="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-crimson-500 focus:border-crimson-500 outline-none transition-all" />
-          <button type="submit" disabled={adding || !email.trim()} className="px-5 py-3 bg-crimson-600 hover:bg-crimson-700 disabled:opacity-60 text-white font-medium rounded-xl flex items-center gap-2 shadow-sm transition-all touch-manipulation">
-            <UserPlus size={18} /> Add
-          </button>
+        <form onSubmit={handleAddStudent} className="space-y-3">
+          <div className="flex gap-3">
+            <input value={email} onChange={e => setEmail(e.target.value)} type="email" placeholder="student@school.edu"
+              className="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-crimson-500 focus:border-crimson-500 outline-none transition-all" />
+            <input value={displayName} onChange={e => setDisplayName(e.target.value)} type="text" placeholder="Display Name"
+              className="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-crimson-500 focus:border-crimson-500 outline-none transition-all" />
+            <button type="submit" disabled={adding || !email.trim() || !displayName.trim()} className="px-5 py-3 bg-crimson-600 hover:bg-crimson-700 disabled:opacity-60 text-white font-medium rounded-xl flex items-center gap-2 shadow-sm transition-all touch-manipulation">
+              <UserPlus size={18} /> Add
+            </button>
+          </div>
         </form>
         {addMsg && <p className="mt-3 text-sm text-emerald-600 flex items-center gap-2"><CheckCircle2 size={16} /> {addMsg}</p>}
         {addError && <p className="mt-3 text-sm text-red-600">{addError}</p>}
-        <p className="mt-3 text-xs text-slate-400">Students must have signed in to the app at least once before you can add them.</p>
+        <p className="mt-3 text-xs text-slate-400">Enter email and display name. If the student already has an account, they will be enrolled. Otherwise a new account is created.</p>
       </section>
 
       {/* Student List */}

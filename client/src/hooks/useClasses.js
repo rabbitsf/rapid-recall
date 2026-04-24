@@ -34,12 +34,12 @@ export function useClasses() {
     setClasses(prev => prev.filter(c => c.id !== id))
   }
 
-  const addStudent = async (classId, email) => {
-    return apiFetch(`/api/classes/${classId}/members`, { method: 'POST', body: JSON.stringify({ email }) })
+  const addStudent = async (classId, email, displayName) => {
+    return apiFetch(`/api/classes/${classId}/members`, { method: 'POST', body: JSON.stringify({ email, displayName }) })
   }
 
-  const bulkAddStudents = async (classId, emails) => {
-    return apiFetch(`/api/classes/${classId}/members/bulk`, { method: 'POST', body: JSON.stringify({ emails }) })
+  const bulkAddStudents = async (classId, entries) => {
+    return apiFetch(`/api/classes/${classId}/members/bulk`, { method: 'POST', body: JSON.stringify({ entries }) })
   }
 
   const removeStudent = async (classId, studentId) => {
