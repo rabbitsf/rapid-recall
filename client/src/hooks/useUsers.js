@@ -42,5 +42,16 @@ export function useUsers() {
     await fetchUsers()
   }
 
-  return { users, loading, createUser, updateUser, refresh: fetchUsers }
+  const batchAction = async (ids, action, extra = {}) => {
+    const res = await fetch('/api/users/batch', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action, ids, ...extra }),
+    })
+    if (!res.ok) { const { error } = await res.json(); throw new Error(error) }
+    await fetchUsers()
+  }
+
+  return { users, loading, createUser, updateUser, batchAction, refresh: fetchUsers }
 }

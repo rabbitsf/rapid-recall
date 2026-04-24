@@ -22,6 +22,7 @@ model User {
   active      Boolean  @default(false)
   photoUrl    String?  @map("photo_url")
   role        Role     @default(student)
+  gradeGroup  String?  @map("grade_group")
   createdAt   DateTime @default(now()) @map("created_at")
 
   classes           Class[]        @relation("TeacherClasses")
