@@ -2,8 +2,6 @@
 
 A full-stack vocabulary study app for K–8 classrooms. Teachers create word sets, share them with classes, and track student progress. Students study through five game modes with audio, images, and AI-generated hints.
 
-**Live:** https://rapid-recall.hamlin.org
-
 ---
 
 ## Features
@@ -204,3 +202,9 @@ Never run `prisma db push` on production.
 | `OPENAI_API_KEY` | Yes | gpt-4o-mini for hints and sentences |
 | `PEXELS_API_KEY` | Yes | Image search for cards |
 | `SEED_ADMIN_EMAIL` | Seed only | Email of the first admin account |
+
+---
+
+## License
+
+MIT License — see [LICENSE](LICENSE).
