@@ -92,6 +92,35 @@ router.post('/:id/members', requireTeacher, async (req, res, next) => {
   } catch (err) { next(err) }
 })
 
+// POST /api/classes/:id/members/bulk — teacher adds multiple students by email
+router.post('/:id/members/bulk', requireTeacher, async (req, res, next) => {
+  try {
+    const cls = await prisma.class.findUnique({ where: { id: req.params.id } })
+    if (!cls || cls.teacherId !== req.user.id) return res.status(403).json({ error: 'Forbidden' })
+
+    const { emails } = req.body
+    if (!Array.isArray(emails) || emails.length === 0) return res.status(400).json({ error: 'emails array required' })
+
+    const added = [], notFound = [], notStudent = [], alreadyIn = []
+
+    for (const raw of emails) {
+      const email = raw.trim().toLowerCase()
+      if (!email) continue
+      const student = await prisma.user.findUnique({ where: { email } })
+      if (!student) { notFound.push(email); continue }
+      if (student.role !== 'student') { notStudent.push(email); continue }
+      const existing = await prisma.classMember.findUnique({
+        where: { classId_studentId: { classId: cls.id, studentId: student.id } },
+      })
+      if (existing) { alreadyIn.push(email); continue }
+      await prisma.classMember.create({ data: { classId: cls.id, studentId: student.id } })
+      added.push(email)
+    }
+
+    res.json({ added, notFound, notStudent, alreadyIn })
+  } catch (err) { next(err) }
+})
+
 // DELETE /api/classes/:id/members/:studentId — teacher removes a student
 router.delete('/:id/members/:studentId', requireTeacher, async (req, res, next) => {
   try {

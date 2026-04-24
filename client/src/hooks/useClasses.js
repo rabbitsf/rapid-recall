@@ -38,6 +38,10 @@ export function useClasses() {
     return apiFetch(`/api/classes/${classId}/members`, { method: 'POST', body: JSON.stringify({ email }) })
   }
 
+  const bulkAddStudents = async (classId, emails) => {
+    return apiFetch(`/api/classes/${classId}/members/bulk`, { method: 'POST', body: JSON.stringify({ emails }) })
+  }
+
   const removeStudent = async (classId, studentId) => {
     await apiFetch(`/api/classes/${classId}/members/${studentId}`, { method: 'DELETE' })
   }
@@ -50,5 +54,5 @@ export function useClasses() {
     return apiFetch(`/api/classes/${classId}/shares/${setId}`, { method: 'DELETE' })
   }
 
-  return { classes, loading, createClass, renameClass, deleteClass, addStudent, removeStudent, shareSet, unshareSet, refetch: fetchClasses }
+  return { classes, loading, createClass, renameClass, deleteClass, addStudent, bulkAddStudents, removeStudent, shareSet, unshareSet, refetch: fetchClasses }
 }
