@@ -8,8 +8,8 @@ const GRADE_LABEL = { K: 'K', '1': '1st', '2': '2nd', '3': '3rd', '4': '4th', '5
 
 const ROLE_BADGE = {
   admin:   'bg-rose-100 text-rose-700',
-  teacher: 'bg-amber-100 text-amber-700',
-  student: 'bg-crimson-100 text-crimson-700',
+  teacher: 'bg-blue-100 text-blue-700',
+  student: 'bg-emerald-100 text-emerald-700',
 }
 
 function BulkAddModal({ onClose, onBulkCreate }) {
@@ -355,7 +355,7 @@ export default function AdminDashboard() {
                 <div key={u.id} className={`flex items-center gap-3 px-4 py-3 transition-colors ${u.active ? 'hover:bg-slate-50' : 'opacity-50 bg-slate-50'}`}>
                   <input type="checkbox" checked={selected.has(u.id)} onChange={() => toggleOne(u.id)}
                     className="w-4 h-4 accent-crimson-600 rounded cursor-pointer shrink-0" />
-                  <div className="w-9 h-9 rounded-full bg-crimson-100 flex items-center justify-center text-crimson-700 font-bold text-sm shrink-0">
+                  <div className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm shrink-0 ${ROLE_BADGE[u.role]}`}>
                     {u.displayName?.[0]?.toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0">
