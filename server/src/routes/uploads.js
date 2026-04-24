@@ -28,7 +28,15 @@ const upload = multer({
 
 const router = Router()
 
-router.post('/cards/:cardId/image', requireAuth, upload.single('image'), async (req, res, next) => {
+const multerMiddleware = (req, res, next) => {
+  upload.single('image')(req, res, err => {
+    if (err?.code === 'LIMIT_FILE_SIZE') return res.status(400).json({ error: 'Image must be 5 MB or smaller.' })
+    if (err) return next(err)
+    next()
+  })
+}
+
+router.post('/cards/:cardId/image', requireAuth, multerMiddleware, async (req, res, next) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'No valid image file provided (JPEG, PNG, WebP, GIF; max 5 MB)' })
 
