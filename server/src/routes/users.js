@@ -89,4 +89,30 @@ router.put('/:id', async (req, res, next) => {
   }
 })
 
+// Bulk create users — returns { created, skipped, failed } lists
+router.post('/bulk', async (req, res, next) => {
+  try {
+    const { users } = req.body
+    if (!Array.isArray(users) || users.length === 0) return res.status(400).json({ error: 'users array required' })
+    if (users.length > 500) return res.status(400).json({ error: 'Max 500 users per bulk add' })
+
+    const created = [], skipped = [], failed = []
+    for (const u of users) {
+      const email = u.email?.toLowerCase().trim()
+      const displayName = u.displayName?.trim()
+      const role = u.role || 'student'
+      if (!email || !displayName) { failed.push({ email: email || '?', reason: 'Missing email or name' }); continue }
+      if (!['admin', 'teacher', 'student'].includes(role)) { failed.push({ email, reason: 'Invalid role' }); continue }
+      try {
+        await prisma.user.create({ data: { email, displayName, role, active: true }, select: { id: true } })
+        created.push(email)
+      } catch (err) {
+        if (err.code === 'P2002') skipped.push(email)
+        else failed.push({ email, reason: 'Server error' })
+      }
+    }
+    res.json({ created, skipped, failed })
+  } catch (err) { next(err) }
+})
+
 export default router

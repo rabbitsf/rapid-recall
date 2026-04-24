@@ -53,5 +53,18 @@ export function useUsers() {
     await fetchUsers()
   }
 
-  return { users, loading, createUser, updateUser, batchAction, refresh: fetchUsers }
+  const bulkCreate = async (userList) => {
+    const res = await fetch('/api/users/bulk', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ users: userList }),
+    })
+    if (!res.ok) { const { error } = await res.json(); throw new Error(error) }
+    const result = await res.json()
+    await fetchUsers()
+    return result
+  }
+
+  return { users, loading, createUser, updateUser, batchAction, bulkCreate, refresh: fetchUsers }
 }

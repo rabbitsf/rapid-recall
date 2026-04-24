@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ShieldCheck, Plus, UserCheck, UserX, GraduationCap, BookOpen, X, Trash2, ChevronDown } from 'lucide-react'
+import { ShieldCheck, Plus, UserCheck, UserX, GraduationCap, BookOpen, X, Trash2, Users } from 'lucide-react'
 import { useUsers } from '../hooks/useUsers.js'
 
 const ROLES = ['student', 'teacher', 'admin']
@@ -10,6 +10,95 @@ const ROLE_BADGE = {
   admin:   'bg-rose-100 text-rose-700',
   teacher: 'bg-amber-100 text-amber-700',
   student: 'bg-crimson-100 text-crimson-700',
+}
+
+function BulkAddModal({ onClose, onBulkCreate }) {
+  const [text, setText] = useState('')
+  const [results, setResults] = useState(null)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  const parse = (raw) => raw.split('\n').flatMap(line => {
+    const trimmed = line.trim()
+    if (!trimmed) return []
+    const parts = trimmed.split(',').map(s => s.trim())
+    return [{ email: parts[0] || '', displayName: parts[1] || '', role: parts[2]?.toLowerCase() || 'student' }]
+  })
+
+  const preview = parse(text)
+  const validCount = preview.filter(u => u.email && u.displayName).length
+
+  const handleSubmit = async () => {
+    if (!validCount) return
+    setSaving(true)
+    setError('')
+    try {
+      const res = await onBulkCreate(preview)
+      setResults(res)
+    } catch (err) { setError(err.message) }
+    finally { setSaving(false) }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto">
+        <div className="flex justify-between items-center mb-5">
+          <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2"><Users size={18} className="text-crimson-600" /> Bulk Add Users</h3>
+          <button onClick={onClose} className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg"><X size={18} /></button>
+        </div>
+
+        {!results ? (
+          <>
+            <p className="text-sm text-slate-500 mb-1">One user per line:</p>
+            <p className="text-xs font-mono bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 mb-3 text-slate-600">
+              email, Display Name, role<br />
+              <span className="text-slate-400">john@school.org, John Smith, student<br />
+              jane@school.org, Jane Doe, teacher<br />
+              (role is optional — defaults to student)</span>
+            </p>
+            <textarea value={text} onChange={e => setText(e.target.value)} rows={10}
+              placeholder={"john@school.org, John Smith\njane@school.org, Jane Doe, teacher"}
+              className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm font-mono outline-none focus:ring-2 focus:ring-crimson-500 resize-none mb-3" />
+            <p className="text-xs text-slate-400 mb-4">
+              {preview.length} line{preview.length !== 1 ? 's' : ''} parsed — {validCount} valid
+            </p>
+            {error && <p className="text-red-600 text-sm bg-red-50 px-4 py-2 rounded-xl mb-3">{error}</p>}
+            <div className="flex gap-3">
+              <button type="button" onClick={onClose} className="flex-1 py-2.5 bg-slate-100 text-slate-700 font-medium rounded-xl text-sm">Cancel</button>
+              <button onClick={handleSubmit} disabled={saving || !validCount}
+                className="flex-1 py-2.5 bg-crimson-600 hover:bg-crimson-700 disabled:opacity-60 text-white font-medium rounded-xl text-sm">
+                {saving ? 'Adding…' : `Add ${validCount} User${validCount !== 1 ? 's' : ''}`}
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="space-y-3 mb-5">
+              {results.created.length > 0 && (
+                <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4">
+                  <p className="text-sm font-semibold text-emerald-700 mb-2">{results.created.length} added successfully</p>
+                  <ul className="text-xs text-emerald-600 space-y-0.5">{results.created.map(e => <li key={e}>{e}</li>)}</ul>
+                </div>
+              )}
+              {results.skipped.length > 0 && (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                  <p className="text-sm font-semibold text-amber-700 mb-2">{results.skipped.length} skipped (email already exists)</p>
+                  <ul className="text-xs text-amber-600 space-y-0.5">{results.skipped.map(e => <li key={e}>{e}</li>)}</ul>
+                </div>
+              )}
+              {results.failed.length > 0 && (
+                <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+                  <p className="text-sm font-semibold text-red-700 mb-2">{results.failed.length} failed</p>
+                  <ul className="text-xs text-red-600 space-y-0.5">{results.failed.map(f => <li key={f.email}>{f.email} — {f.reason}</li>)}</ul>
+                </div>
+              )}
+            </div>
+            <button onClick={onClose} className="w-full py-2.5 bg-crimson-600 hover:bg-crimson-700 text-white font-medium rounded-xl text-sm">Done</button>
+          </>
+        )}
+      </div>
+    </div>
+  )
 }
 
 function AddUserModal({ onClose, onCreate }) {
@@ -65,8 +154,9 @@ function AddUserModal({ onClose, onCreate }) {
 }
 
 export default function AdminDashboard() {
-  const { users, loading, createUser, updateUser, batchAction } = useUsers()
+  const { users, loading, createUser, updateUser, batchAction, bulkCreate } = useUsers()
   const [showAdd, setShowAdd] = useState(false)
+  const [showBulk, setShowBulk] = useState(false)
   const [search, setSearch] = useState('')
   const [roleFilter, setRoleFilter] = useState('all')
   const [gradeFilter, setGradeFilter] = useState(null)   // null = all grades
@@ -126,6 +216,7 @@ export default function AdminDashboard() {
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {showAdd && <AddUserModal onClose={() => setShowAdd(false)} onCreate={createUser} />}
+      {showBulk && <BulkAddModal onClose={() => setShowBulk(false)} onBulkCreate={bulkCreate} />}
 
       <div>
         <h2 className="text-3xl font-bold text-slate-800 flex items-center gap-2"><ShieldCheck className="text-rose-500" size={28} /> Admin Dashboard</h2>
@@ -189,6 +280,9 @@ export default function AdminDashboard() {
           <div className="flex gap-3 items-center">
             <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name or email…"
               className="flex-1 px-4 py-2 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-crimson-500 focus:border-crimson-500" />
+            <button onClick={() => setShowBulk(true)} className="flex items-center gap-2 px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white font-medium rounded-xl text-sm shadow-sm transition-colors shrink-0">
+              <Users size={16} /> Bulk Add
+            </button>
             <button onClick={() => setShowAdd(true)} className="flex items-center gap-2 px-4 py-2 bg-crimson-600 hover:bg-crimson-700 text-white font-medium rounded-xl text-sm shadow-sm transition-colors shrink-0">
               <Plus size={16} /> Add User
             </button>
