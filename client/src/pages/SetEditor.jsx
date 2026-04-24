@@ -18,7 +18,7 @@ export default function SetEditor() {
   const [error, setError] = useState(null)
   const fileInputRefs = useRef({})
   const savedSetIdRef = useRef(null)          // ID of set auto-saved during image upload
-  const [pendingUploadIdx, setPendingUploadIdx] = useState(null)  // card index awaiting file picker
+  const [pendingUploadCardId, setPendingUploadCardId] = useState(null)  // DB card ID awaiting file picker
 
   useEffect(() => {
     if (existing) {
@@ -28,15 +28,15 @@ export default function SetEditor() {
     }
   }, [existing?.id])
 
-  // After auto-save replaces card IDs, open the file picker for the pending card
+  // After auto-save, open the file picker for the specific saved card
   useEffect(() => {
-    if (pendingUploadIdx === null) return
-    const card = cards[pendingUploadIdx]
-    if (card?.id.includes('-') && fileInputRefs.current[card.id]) {
-      fileInputRefs.current[card.id].click()
-      setPendingUploadIdx(null)
+    if (!pendingUploadCardId) return
+    const el = fileInputRefs.current[pendingUploadCardId]
+    if (el) {
+      el.click()
+      setPendingUploadCardId(null)
     }
-  }, [pendingUploadIdx, cards])
+  }, [pendingUploadCardId])
 
   const addCard = () => setCards(c => [...c, { id: Date.now().toString(), term: '', definition: '' }])
   const updateCard = (cid, field, val) => setCards(c => c.map(x => x.id === cid ? { ...x, [field]: val } : x))
@@ -84,8 +84,10 @@ export default function SetEditor() {
     try {
       const savedSet = await saveSet({ id: existing?.id ?? savedSetIdRef.current, title, cards: valid, isSpanish })
       savedSetIdRef.current = savedSet.id
-      setCards(savedSet.cards)        // replaces temp IDs with real DB UUIDs
-      setPendingUploadIdx(i)          // useEffect will click the picker once DOM updates
+      const validIdx = valid.findIndex(c => c.id === card.id)
+      const targetCard = validIdx >= 0 ? savedSet.cards[validIdx] : null
+      setCards(savedSet.cards)
+      if (targetCard) setPendingUploadCardId(targetCard.id)
     } catch (err) { setError(err.message) }
     finally { setSaving(false) }
   }
