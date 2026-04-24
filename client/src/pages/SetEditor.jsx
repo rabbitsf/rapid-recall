@@ -38,7 +38,7 @@ export default function SetEditor() {
       const delim = line.includes('\t') ? '\t' : line.includes(',') ? ',' : line.includes('-') ? '-' : ':'
       const parts = line.split(delim)
       if (parts.length < 2) return null
-      return { id: `${Date.now()}-${i}`, term: parts[0].trim(), definition: parts.slice(1).join(delim).trim() }
+      return { id: `${Date.now()}_${i}`, term: parts[0].trim(), definition: parts.slice(1).join(delim).trim() }
     }).filter(Boolean)
 
     if (!newCards.length) return alert("No valid pairs found. Use tab, comma, dash, or colon as separator.")
