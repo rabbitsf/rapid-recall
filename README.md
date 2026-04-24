@@ -43,7 +43,7 @@ A full-stack vocabulary study app for K–8 classrooms. Teachers create word set
 ## Project Structure
 
 ```
-quizlet/
+rapid-recall/
   prisma/
     schema.prisma        — data model
     migrations/          — committed migration files
