@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, RefreshCw, Link2, CheckCircle2, Download, Users, Unlink, ShieldCheck } from 'lucide-react'
+import { ArrowLeft, RefreshCw, Link2, CheckCircle2, Download, Users, Unlink, ShieldCheck, Search } from 'lucide-react'
 import { useAuth } from '../context/AuthContext.jsx'
 
 export default function ClassroomImport() {
@@ -14,6 +14,7 @@ export default function ClassroomImport() {
   const [syncing, setSyncing] = useState(null) // courseId being synced
   const [results, setResults] = useState({}) // courseId → sync result
   const [syncError, setSyncError] = useState('')
+  const [search, setSearch] = useState('')
 
   const checkStatus = useCallback(async () => {
     const res = await fetch('/api/classroom/status', { credentials: 'include' })
@@ -136,6 +137,18 @@ export default function ClassroomImport() {
             </div>
           )}
 
+          {!loading && courses.length > 0 && (
+            <div className="relative">
+              <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+              <input
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Search classes…"
+                className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-crimson-500 focus:border-crimson-500 transition-all"
+              />
+            </div>
+          )}
+
           {loading ? (
             <div className="grid gap-4">
               {[1, 2, 3].map(i => <div key={i} className="h-24 bg-slate-100 rounded-2xl animate-pulse" />)}
@@ -146,7 +159,10 @@ export default function ClassroomImport() {
             </div>
           ) : (
             <div className="grid gap-3">
-              {courses.map(course => {
+              {courses.filter(c => {
+                const q = search.trim().toLowerCase()
+                return !q || c.name.toLowerCase().includes(q) || c.section?.toLowerCase().includes(q)
+              }).map(course => {
                 const result = results[course.id]
                 const isSyncing = syncing === course.id
                 return (
