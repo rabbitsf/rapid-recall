@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { flushSync } from 'react-dom'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Plus, Trash2, Upload, X, Image } from 'lucide-react'
 import { useSets } from '../hooks/useSets.js'
@@ -18,7 +19,6 @@ export default function SetEditor() {
   const [error, setError] = useState(null)
   const fileInputRefs = useRef({})
   const savedSetIdRef = useRef(null)          // ID of set auto-saved during image upload
-  const [pendingUploadCardId, setPendingUploadCardId] = useState(null)  // DB card ID awaiting file picker
 
   useEffect(() => {
     if (existing) {
@@ -27,16 +27,6 @@ export default function SetEditor() {
       setCards(existing.cards)
     }
   }, [existing?.id])
-
-  // After auto-save, open the file picker for the specific saved card
-  useEffect(() => {
-    if (!pendingUploadCardId) return
-    const el = fileInputRefs.current[pendingUploadCardId]
-    if (el) {
-      el.click()
-      setPendingUploadCardId(null)
-    }
-  }, [pendingUploadCardId])
 
   const addCard = () => setCards(c => [...c, { id: Date.now().toString(), term: '', definition: '' }])
   const updateCard = (cid, field, val) => setCards(c => c.map(x => x.id === cid ? { ...x, [field]: val } : x))
@@ -86,8 +76,8 @@ export default function SetEditor() {
       savedSetIdRef.current = savedSet.id
       const validIdx = valid.findIndex(c => c.id === card.id)
       const targetCard = validIdx >= 0 ? savedSet.cards[validIdx] : null
-      setCards(savedSet.cards)
-      if (targetCard) setPendingUploadCardId(targetCard.id)
+      flushSync(() => setCards(savedSet.cards))  // ensure DOM + refs update before clicking
+      if (targetCard) fileInputRefs.current[targetCard.id]?.click()
     } catch (err) { setError(err.message) }
     finally { setSaving(false) }
   }
