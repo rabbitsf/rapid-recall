@@ -40,8 +40,27 @@ export default function FlashcardsMode({ set, onBack }) {
   // undefined = button shows; '' = no image found (button hidden); 'https://...' = shown
   const currentImage = images[card.id]
 
-  const speakTerm = (e) => {
+  const speakTerm = async (e) => {
     e.stopPropagation()
+    if (set.isSpanish) {
+      try {
+        const res = await fetch('/api/ai/tts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ text: card.term }),
+        })
+        if (!res.ok) throw new Error('tts failed')
+        const blob = await res.blob()
+        const url = URL.createObjectURL(blob)
+        const audio = new Audio(url)
+        audio.onended = () => URL.revokeObjectURL(url)
+        audio.play()
+        return
+      } catch {
+        // fall through to browser TTS
+      }
+    }
     window.speechSynthesis.cancel()
     const utt = new SpeechSynthesisUtterance(card.term)
     if (set.isSpanish) utt.lang = 'es-ES'
