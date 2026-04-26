@@ -40,29 +40,8 @@ export default function FlashcardsMode({ set, onBack }) {
   // undefined = button shows; '' = no image found (button hidden); 'https://...' = shown
   const currentImage = images[card.id]
 
-  const speakTerm = async (e) => {
+  const speakTerm = (e) => {
     e.stopPropagation()
-    if (set.isSpanish) {
-      try {
-        const res = await fetch('/api/ai/tts', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({ text: card.term }),
-        })
-        if (!res.ok) throw new Error(`tts http ${res.status}`)
-        const arrayBuffer = await res.arrayBuffer()
-        const audioCtx = new AudioContext()
-        const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer)
-        const source = audioCtx.createBufferSource()
-        source.buffer = audioBuffer
-        source.connect(audioCtx.destination)
-        source.start(0)
-        return
-      } catch (err) {
-        console.error('OpenAI TTS failed, falling back to browser:', err)
-      }
-    }
     window.speechSynthesis.cancel()
     const utt = new SpeechSynthesisUtterance(card.term)
     if (set.isSpanish) utt.lang = 'es-ES'

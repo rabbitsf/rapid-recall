@@ -115,23 +115,4 @@ router.post('/sets/:setId/sentences', requireAuth, async (req, res, next) => {
   } catch (err) { next(err) }
 })
 
-// POST /api/ai/tts
-router.post('/tts', requireAuth, async (req, res, next) => {
-  try {
-    const { text } = req.body
-    if (!text) return res.status(400).json({ error: 'text required' })
-    const audio = await openai.audio.speech.create({
-      model: 'tts-1',
-      voice: 'nova',
-      input: text,
-    })
-    const buffer = Buffer.from(await audio.arrayBuffer())
-    res.set('Content-Type', 'audio/mpeg')
-    res.send(buffer)
-  } catch (err) {
-    if (isRateLimit(err)) return res.status(429).json({ error: 'rate_limit' })
-    next(err)
-  }
-})
-
 export default router
