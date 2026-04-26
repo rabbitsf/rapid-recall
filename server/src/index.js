@@ -38,6 +38,7 @@ app.use(helmet({
       scriptSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
       imgSrc: ["'self'", 'https://hamlin.org', 'https://lh3.googleusercontent.com', 'https://images.pexels.com', 'data:'],
+      mediaSrc: ["'self'", "blob:"],
       connectSrc: ["'self'"],
       frameAncestors: ["'none'"],
     },
