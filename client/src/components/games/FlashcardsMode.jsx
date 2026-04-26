@@ -51,11 +51,13 @@ export default function FlashcardsMode({ set, onBack }) {
           body: JSON.stringify({ text: card.term }),
         })
         if (!res.ok) throw new Error(`tts http ${res.status}`)
-        const blob = await res.blob()
-        const url = URL.createObjectURL(blob)
-        const audio = new Audio(url)
-        audio.onended = () => URL.revokeObjectURL(url)
-        await audio.play()
+        const arrayBuffer = await res.arrayBuffer()
+        const audioCtx = new AudioContext()
+        const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer)
+        const source = audioCtx.createBufferSource()
+        source.buffer = audioBuffer
+        source.connect(audioCtx.destination)
+        source.start(0)
         return
       } catch (err) {
         console.error('OpenAI TTS failed, falling back to browser:', err)
