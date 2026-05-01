@@ -26,6 +26,7 @@ import usersRoutes from './routes/users.js'
 import classroomRoutes from './routes/classroom.js'
 import aiRoutes from './routes/ai.js'
 import uploadsRoutes from './routes/uploads.js'
+import pronunciationRoutes from './routes/pronunciation.js'
 
 const app = express()
 app.set('trust proxy', 1) // required when running behind Apache/nginx reverse proxy
@@ -75,6 +76,7 @@ app.use('/api/users', apiLimiter, usersRoutes)
 app.use('/api/classroom', apiLimiter, classroomRoutes)
 app.use('/api/ai', apiLimiter, aiRoutes)
 app.use('/api/uploads', apiLimiter, uploadsRoutes)
+app.use('/api/pronunciation', apiLimiter, pronunciationRoutes)
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')))
 
 app.use((err, _req, res, _next) => {
