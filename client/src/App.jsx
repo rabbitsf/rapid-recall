@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from './context/AuthContext.jsx'
 import { RefreshCw } from 'lucide-react'
 import LoginPage from './pages/LoginPage.jsx'
@@ -24,6 +24,7 @@ function RequireAuth({ children }) {
 
 export default function App() {
   const { user } = useAuth()
+  const location = useLocation()
 
   return (
     <Routes>
@@ -34,7 +35,9 @@ export default function App() {
           <Layout>
             <Routes>
               <Route path="/" element={
-                user?.role === 'student' ? <StudentDashboard /> : <TeacherDashboard />
+                user?.role === 'student'
+                  ? <StudentDashboard key={location.key} />
+                  : <TeacherDashboard key={location.key} />
               } />
               <Route path="/admin" element={user?.role === 'admin' ? <AdminDashboard /> : <Navigate to="/" replace />} />
               <Route path="/sets/new" element={<SetEditor />} />
