@@ -20,6 +20,22 @@ function isRateLimit(err) {
   return err.status === 429
 }
 
+function sentencePrompt(term, definition, isSpanish) {
+  if (isSpanish) {
+    return (
+      `Write one simple Spanish sentence for a 1st or 2nd grade student that uses the word "${term}" (meaning: "${definition}"). ` +
+      `Use only very common, everyday Spanish words — short sentence, easy vocabulary. ` +
+      `Replace "${term}" in the sentence with "___". ` +
+      `Return only the sentence, no quotes or extra text.`
+    )
+  }
+  return (
+    `Write one natural sentence that uses the vocabulary word "${term}" (meaning: "${definition}"). ` +
+    `Replace the word "${term}" in the sentence with "___". ` +
+    `Return only the sentence, no quotes or extra text.`
+  )
+}
+
 // POST /api/ai/cards/:cardId/hint
 router.post('/cards/:cardId/hint', requireAuth, async (req, res, next) => {
   try {
@@ -66,15 +82,14 @@ router.post('/cards/:cardId/image', requireAuth, async (req, res, next) => {
 // Generates (and caches) one fill-in-the-blank sentence for a single card.
 router.post('/cards/:cardId/sentence', requireAuth, async (req, res, next) => {
   try {
-    const card = await prisma.card.findUnique({ where: { id: req.params.cardId } })
+    const card = await prisma.card.findUnique({
+      where: { id: req.params.cardId },
+      include: { set: { select: { isSpanish: true } } },
+    })
     if (!card) return res.status(404).json({ error: 'Card not found' })
     if (card.exampleSentence) return res.json({ exampleSentence: card.exampleSentence })
 
-    const exampleSentence = await callAI(
-      `Write one natural sentence that uses the vocabulary word "${card.term}" (meaning: "${card.definition}"). ` +
-      `Replace the word "${card.term}" in the sentence with "___". ` +
-      `Return only the sentence, no quotes or extra text.`
-    )
+    const exampleSentence = await callAI(sentencePrompt(card.term, card.definition, card.set.isSpanish))
     await prisma.card.update({ where: { id: card.id }, data: { exampleSentence } })
     res.json({ exampleSentence })
   } catch (err) {
@@ -87,20 +102,19 @@ router.post('/cards/:cardId/sentence', requireAuth, async (req, res, next) => {
 // Batch-generates sentences for all cards missing one. Continues on per-card failures.
 router.post('/sets/:setId/sentences', requireAuth, async (req, res, next) => {
   try {
-    const allCards = await prisma.card.findMany({
-      where: { setId: req.params.setId },
-      select: { id: true, term: true, definition: true, exampleSentence: true },
-    })
+    const [set, allCards] = await Promise.all([
+      prisma.wordSet.findUnique({ where: { id: req.params.setId }, select: { isSpanish: true } }),
+      prisma.card.findMany({
+        where: { setId: req.params.setId },
+        select: { id: true, term: true, definition: true, exampleSentence: true },
+      }),
+    ])
     if (!allCards.length) return res.status(404).json({ error: 'Set not found or empty' })
 
     const missing = allCards.filter(c => !c.exampleSentence)
     for (const card of missing) {
       try {
-        const exampleSentence = await callAI(
-          `Write one natural sentence that uses the vocabulary word "${card.term}" (meaning: "${card.definition}"). ` +
-          `Replace the word "${card.term}" in the sentence with "___". ` +
-          `Return only the sentence, no quotes or extra text.`
-        )
+        const exampleSentence = await callAI(sentencePrompt(card.term, card.definition, set?.isSpanish))
         await prisma.card.update({ where: { id: card.id }, data: { exampleSentence } })
         card.exampleSentence = exampleSentence
       } catch (err) {
