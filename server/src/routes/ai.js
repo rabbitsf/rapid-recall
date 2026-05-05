@@ -23,14 +23,15 @@ function isRateLimit(err) {
 function sentencePrompt(term, definition, isSpanish) {
   if (isSpanish) {
     return (
-      `Write one simple Spanish sentence for a 1st or 2nd grade student that uses the word "${term}" (meaning: "${definition}"). ` +
-      `Use only very common, everyday Spanish words — short sentence, easy vocabulary. ` +
+      `Write one simple Spanish sentence for a 1st or 2nd grade student (under age 13) that uses the word "${term}" (meaning: "${definition}"). ` +
+      `Use only very common, everyday Spanish words — short sentence, easy vocabulary, child-appropriate topic. ` +
       `Replace "${term}" in the sentence with "___". ` +
       `Return only the sentence, no quotes or extra text.`
     )
   }
   return (
-    `Write one natural sentence that uses the vocabulary word "${term}" (meaning: "${definition}"). ` +
+    `Write one simple sentence for a student under age 13 that uses the vocabulary word "${term}" (meaning: "${definition}"). ` +
+    `Keep the vocabulary and topic age-appropriate for children. ` +
     `Replace the word "${term}" in the sentence with "___". ` +
     `Return only the sentence, no quotes or extra text.`
   )
