@@ -63,8 +63,9 @@ app.use(session({
 app.use(passport.initialize())
 app.use(passport.session())
 
-const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, standardHeaders: true, legacyHeaders: false })
-const apiLimiter  = rateLimit({ windowMs: 15 * 60 * 1000, max: 100, standardHeaders: true, legacyHeaders: false })
+// High limits because all school students share one external IP (NAT)
+const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 300, standardHeaders: true, legacyHeaders: false })
+const apiLimiter  = rateLimit({ windowMs: 15 * 60 * 1000, max: 1000, standardHeaders: true, legacyHeaders: false })
 
 app.use('/auth', authLimiter, authRoutes)
 app.use('/api/sets', apiLimiter, setsRoutes)
