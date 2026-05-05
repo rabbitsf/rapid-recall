@@ -38,6 +38,18 @@ router.post('/', requireTeacher, async (req, res, next) => {
   } catch (err) { next(err) }
 })
 
+// GET /api/classes/students — all active students for the pick-from-list feature
+router.get('/students', requireTeacher, async (req, res, next) => {
+  try {
+    const students = await prisma.user.findMany({
+      where: { role: 'student', active: true },
+      select: { id: true, email: true, displayName: true, photoUrl: true },
+      orderBy: { displayName: 'asc' },
+    })
+    res.json(students)
+  } catch (err) { next(err) }
+})
+
 // PUT /api/classes/:id — rename a class
 router.put('/:id', requireTeacher, async (req, res, next) => {
   try {

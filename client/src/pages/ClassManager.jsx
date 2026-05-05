@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, UserPlus, UserMinus, Share2, X, CheckCircle2, Users } from 'lucide-react'
+import { ArrowLeft, UserPlus, UserMinus, Share2, X, CheckCircle2, Users, Search } from 'lucide-react'
 import { useClasses } from '../hooks/useClasses.js'
 import { useSets } from '../hooks/useSets.js'
 import { useAuth } from '../context/AuthContext.jsx'
@@ -91,6 +91,106 @@ function BulkAddStudentsModal({ onClose, onBulkAdd }) {
   )
 }
 
+function PickStudentsModal({ enrolledIds, onClose, onBulkAdd }) {
+  const [all, setAll] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [search, setSearch] = useState('')
+  const [selected, setSelected] = useState(new Set())
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    fetch('/api/classes/students', { credentials: 'include' })
+      .then(r => r.json())
+      .then(data => { setAll(data); setLoading(false) })
+      .catch(() => { setError('Failed to load students'); setLoading(false) })
+  }, [])
+
+  const unenrolled = all.filter(s => !enrolledIds.has(s.id))
+  const filtered = unenrolled.filter(s =>
+    s.displayName.toLowerCase().includes(search.toLowerCase()) ||
+    s.email.toLowerCase().includes(search.toLowerCase())
+  )
+
+  const toggle = (id) => setSelected(prev => {
+    const next = new Set(prev)
+    next.has(id) ? next.delete(id) : next.add(id)
+    return next
+  })
+
+  const toggleAll = () => {
+    if (selected.size === filtered.length) setSelected(new Set())
+    else setSelected(new Set(filtered.map(s => s.id)))
+  }
+
+  const handleAdd = async () => {
+    const entries = all.filter(s => selected.has(s.id)).map(s => ({ email: s.email, displayName: s.displayName }))
+    setSaving(true); setError('')
+    try { await onBulkAdd(entries); onClose() }
+    catch (err) { setError(err.message) }
+    finally { setSaving(false) }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 max-h-[90vh] flex flex-col">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2"><Users size={18} className="text-crimson-600" /> Pick from Student List</h3>
+          <button onClick={onClose} className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg"><X size={18} /></button>
+        </div>
+
+        <div className="relative mb-3">
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name or email…"
+            className="w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-crimson-500" />
+        </div>
+
+        {loading ? (
+          <p className="text-sm text-slate-400 text-center py-8">Loading…</p>
+        ) : unenrolled.length === 0 ? (
+          <p className="text-sm text-slate-400 text-center py-8">All students are already enrolled.</p>
+        ) : (
+          <>
+            <div className="flex items-center justify-between mb-2 px-1">
+              <span className="text-xs text-slate-400">{filtered.length} student{filtered.length !== 1 ? 's' : ''} shown</span>
+              {filtered.length > 0 && (
+                <button onClick={toggleAll} className="text-xs text-crimson-600 font-medium hover:underline">
+                  {selected.size === filtered.length ? 'Deselect all' : 'Select all'}
+                </button>
+              )}
+            </div>
+            <ul className="overflow-y-auto flex-1 space-y-1 mb-4">
+              {filtered.map(s => (
+                <li key={s.id} onClick={() => toggle(s.id)}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer transition-colors ${selected.has(s.id) ? 'bg-crimson-50 border border-crimson-200' : 'hover:bg-slate-50 border border-transparent'}`}>
+                  <input type="checkbox" readOnly checked={selected.has(s.id)} className="accent-crimson-600 w-4 h-4 shrink-0" />
+                  {s.photoUrl
+                    ? <img src={s.photoUrl} alt="" className="w-7 h-7 rounded-full shrink-0" />
+                    : <div className="w-7 h-7 rounded-full bg-crimson-200 flex items-center justify-center text-crimson-700 font-bold text-xs shrink-0">{s.displayName?.[0]}</div>
+                  }
+                  <div className="min-w-0">
+                    <p className="font-medium text-slate-800 text-sm truncate">{s.displayName}</p>
+                    <p className="text-xs text-slate-400 truncate">{s.email}</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+
+        {error && <p className="text-red-600 text-sm mb-3">{error}</p>}
+        <div className="flex gap-3 pt-2 border-t border-slate-100">
+          <button onClick={onClose} className="flex-1 py-2.5 bg-slate-100 text-slate-700 font-medium rounded-xl text-sm">Cancel</button>
+          <button onClick={handleAdd} disabled={saving || selected.size === 0}
+            className="flex-1 py-2.5 bg-crimson-600 hover:bg-crimson-700 disabled:opacity-60 text-white font-medium rounded-xl text-sm">
+            {saving ? 'Adding…' : `Add ${selected.size || ''} Student${selected.size !== 1 ? 's' : ''}`}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function ClassManager() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -107,6 +207,7 @@ export default function ClassManager() {
   const [addError, setAddError] = useState(null)
   const [adding, setAdding] = useState(false)
   const [showBulk, setShowBulk] = useState(false)
+  const [showPick, setShowPick] = useState(false)
 
   if (!cls) return (
     <div className="text-center py-20 text-slate-500">
@@ -155,6 +256,7 @@ export default function ClassManager() {
   return (
     <div className="max-w-3xl mx-auto space-y-8 animate-in fade-in duration-300">
       {showBulk && <BulkAddStudentsModal onClose={() => setShowBulk(false)} onBulkAdd={handleBulkAdd} />}
+      {showPick && <PickStudentsModal enrolledIds={new Set(cls.members?.map(m => m.studentId))} onClose={() => { setShowPick(false); refetch() }} onBulkAdd={handleBulkAdd} />}
       <button onClick={() => navigate('/')} className="flex items-center gap-2 text-slate-500 hover:text-crimson-600 font-medium transition-colors touch-manipulation">
         <ArrowLeft size={18} /> Back to Dashboard
       </button>
@@ -168,9 +270,14 @@ export default function ClassManager() {
       <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2"><UserPlus size={20} className="text-crimson-600" /> Add Students</h3>
-          <button onClick={() => setShowBulk(true)} className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-xl text-sm transition-colors touch-manipulation">
-            <Users size={15} /> Bulk Add
-          </button>
+          <div className="flex gap-2">
+            <button onClick={() => setShowPick(true)} className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-xl text-sm transition-colors touch-manipulation">
+              <Search size={15} /> Pick from List
+            </button>
+            <button onClick={() => setShowBulk(true)} className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-xl text-sm transition-colors touch-manipulation">
+              <Users size={15} /> Bulk Add
+            </button>
+          </div>
         </div>
         <form onSubmit={handleAddStudent} className="space-y-3">
           <div className="flex gap-3">
