@@ -95,6 +95,7 @@ function PickStudentsModal({ enrolledIds, onClose, onBulkAdd }) {
   const [all, setAll] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
+  const [gradeFilter, setGradeFilter] = useState(null) // null = all
   const [selected, setSelected] = useState(new Set())
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -106,11 +107,14 @@ function PickStudentsModal({ enrolledIds, onClose, onBulkAdd }) {
       .catch(() => { setError('Failed to load students'); setLoading(false) })
   }, [])
 
+  const GRADES = ['K', '1', '2', '3', '4', '5', '6', '7', '8']
   const unenrolled = all.filter(s => !enrolledIds.has(s.id))
-  const filtered = unenrolled.filter(s =>
-    s.displayName.toLowerCase().includes(search.toLowerCase()) ||
-    s.email.toLowerCase().includes(search.toLowerCase())
-  )
+  const filtered = unenrolled.filter(s => {
+    if (gradeFilter === 'none' && s.gradeGroup != null) return false
+    if (gradeFilter && gradeFilter !== 'none' && s.gradeGroup !== gradeFilter) return false
+    return s.displayName.toLowerCase().includes(search.toLowerCase()) ||
+           s.email.toLowerCase().includes(search.toLowerCase())
+  })
 
   const toggle = (id) => setSelected(prev => {
     const next = new Set(prev)
@@ -139,10 +143,22 @@ function PickStudentsModal({ enrolledIds, onClose, onBulkAdd }) {
           <button onClick={onClose} className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg"><X size={18} /></button>
         </div>
 
-        <div className="relative mb-3">
+        <div className="relative mb-2">
           <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name or email…"
             className="w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-crimson-500" />
+        </div>
+        <div className="flex flex-wrap gap-1.5 mb-3">
+          {[null, ...GRADES, 'none'].map(g => {
+            const label = g === null ? 'All' : g === 'none' ? 'No grade' : `Gr ${g}`
+            const active = gradeFilter === g
+            return (
+              <button key={String(g)} onClick={() => setGradeFilter(g)}
+                className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${active ? 'bg-crimson-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
+                {label}
+              </button>
+            )
+          })}
         </div>
 
         {loading ? (
@@ -168,10 +184,13 @@ function PickStudentsModal({ enrolledIds, onClose, onBulkAdd }) {
                     ? <img src={s.photoUrl} alt="" className="w-7 h-7 rounded-full shrink-0" />
                     : <div className="w-7 h-7 rounded-full bg-crimson-200 flex items-center justify-center text-crimson-700 font-bold text-xs shrink-0">{s.displayName?.[0]}</div>
                   }
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <p className="font-medium text-slate-800 text-sm truncate">{s.displayName}</p>
                     <p className="text-xs text-slate-400 truncate">{s.email}</p>
                   </div>
+                  {s.gradeGroup && (
+                    <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 shrink-0">Gr {s.gradeGroup}</span>
+                  )}
                 </li>
               ))}
             </ul>
