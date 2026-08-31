@@ -49,10 +49,20 @@ router.post('/batch', async (req, res, next) => {
       await prisma.user.updateMany({ where: { id: { in: safeIds } }, data: { gradeGroup: gradeGroup ?? null } })
     } else if (action === 'delete') {
       await prisma.$transaction(async tx => {
-        await tx.class.deleteMany({ where: { teacherId: { in: safeIds } } })
-        await tx.wordSet.deleteMany({ where: { ownerId: { in: safeIds } } })
+        // Sets these users own — their game_results FK is ON DELETE RESTRICT,
+        // so every result referencing them (from any user) must go first.
+        const ownedSets = await tx.wordSet.findMany({
+          where: { ownerId: { in: safeIds } },
+          select: { id: true },
+        })
+        const setIds = ownedSets.map(s => s.id)
+
+        await tx.gameResult.deleteMany({
+          where: { OR: [{ userId: { in: safeIds } }, { setId: { in: setIds } }] },
+        })
         await tx.studyLog.deleteMany({ where: { userId: { in: safeIds } } })
-        await tx.gameResult.deleteMany({ where: { userId: { in: safeIds } } })
+        await tx.wordSet.deleteMany({ where: { id: { in: setIds } } })
+        await tx.class.deleteMany({ where: { teacherId: { in: safeIds } } })
         await tx.user.deleteMany({ where: { id: { in: safeIds } } })
       })
     } else {
