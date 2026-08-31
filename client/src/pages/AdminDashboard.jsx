@@ -14,6 +14,7 @@ const ROLE_BADGE = {
 
 function BulkAddModal({ onClose, onBulkCreate }) {
   const [text, setText] = useState('')
+  const [grade, setGrade] = useState('')
   const [results, setResults] = useState(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -33,7 +34,7 @@ function BulkAddModal({ onClose, onBulkCreate }) {
     setSaving(true)
     setError('')
     try {
-      const res = await onBulkCreate(preview)
+      const res = await onBulkCreate(preview, grade || null)
       setResults(res)
     } catch (err) { setError(err.message) }
     finally { setSaving(false) }
@@ -62,6 +63,15 @@ function BulkAddModal({ onClose, onBulkCreate }) {
             <p className="text-xs text-slate-400 mb-4">
               {preview.length} line{preview.length !== 1 ? 's' : ''} parsed — {validCount} valid
             </p>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-slate-700 mb-1">Grade Group</label>
+              <select value={grade} onChange={e => setGrade(e.target.value)}
+                className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-crimson-500 focus:border-crimson-500 text-sm">
+                <option value="">None</option>
+                {GRADES.map(g => <option key={g} value={g}>{GRADE_LABEL[g]}</option>)}
+              </select>
+              <p className="text-xs text-slate-400 mt-1">Applied to every student in this batch (ignored for teachers/admins).</p>
+            </div>
             {error && <p className="text-red-600 text-sm bg-red-50 px-4 py-2 rounded-xl mb-3">{error}</p>}
             <div className="flex gap-3">
               <button type="button" onClick={onClose} className="flex-1 py-2.5 bg-slate-100 text-slate-700 font-medium rounded-xl text-sm">Cancel</button>

@@ -53,12 +53,12 @@ export function useUsers() {
     await fetchUsers()
   }
 
-  const bulkCreate = async (userList) => {
+  const bulkCreate = async (userList, gradeGroup = null) => {
     const res = await fetch('/api/users/bulk', {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ users: userList }),
+      body: JSON.stringify({ users: userList, gradeGroup }),
     })
     if (!res.ok) { const { error } = await res.json(); throw new Error(error) }
     const result = await res.json()

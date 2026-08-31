@@ -102,9 +102,13 @@ router.put('/:id', async (req, res, next) => {
 // Bulk create users — returns { created, skipped, failed } lists
 router.post('/bulk', async (req, res, next) => {
   try {
-    const { users } = req.body
+    const { users, gradeGroup } = req.body
     if (!Array.isArray(users) || users.length === 0) return res.status(400).json({ error: 'users array required' })
     if (users.length > 500) return res.status(400).json({ error: 'Max 500 users per bulk add' })
+
+    const validGrades = ['K', '1', '2', '3', '4', '5', '6', '7', '8']
+    const gg = gradeGroup && validGrades.includes(gradeGroup) ? gradeGroup : null
+    if (gradeGroup && gg === null) return res.status(400).json({ error: 'Invalid grade group' })
 
     const created = [], skipped = [], failed = []
     for (const u of users) {
@@ -114,7 +118,8 @@ router.post('/bulk', async (req, res, next) => {
       if (!email || !displayName) { failed.push({ email: email || '?', reason: 'Missing email or name' }); continue }
       if (!['admin', 'teacher', 'student'].includes(role)) { failed.push({ email, reason: 'Invalid role' }); continue }
       try {
-        await prisma.user.create({ data: { email, displayName, role, active: true }, select: { id: true } })
+        // Grade group only applies to students
+        await prisma.user.create({ data: { email, displayName, role, active: true, gradeGroup: role === 'student' ? gg : null }, select: { id: true } })
         created.push(email)
       } catch (err) {
         if (err.code === 'P2002') skipped.push(email)
