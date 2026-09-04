@@ -1,21 +1,23 @@
 import { useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Users, BarChart2, Play, Edit3, Trash2, Layers, GraduationCap, Download, Check, X } from 'lucide-react'
+import { Plus, Users, BarChart2, Play, Edit3, Trash2, Layers, GraduationCap, Download, Check, X, Share2 } from 'lucide-react'
 import { useSets } from '../hooks/useSets.js'
 import { useClasses } from '../hooks/useClasses.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import StudyMenu from '../components/StudyMenu.jsx'
+import ShareSetModal from '../components/ShareSetModal.jsx'
 
 export default function TeacherDashboard() {
   const navigate = useNavigate()
   const { user } = useAuth()
-  const { sets, loading: setsLoading, saveSet, deleteSet } = useSets()
+  const { sets, loading: setsLoading, saveSet, deleteSet, shareSet } = useSets()
   const { classes, loading: classesLoading, createClass, renameClass, deleteClass } = useClasses()
   const [newClassName, setNewClassName] = useState('')
   const [creating, setCreating] = useState(false)
   const [activeSet, setActiveSet] = useState(null)
   const [editingClassId, setEditingClassId] = useState(null)
   const [editingName, setEditingName] = useState('')
+  const [sharingSet, setSharingSet] = useState(null)
   const editInputRef = useRef(null)
 
   const startEdit = (cls) => {
@@ -32,7 +34,8 @@ export default function TeacherDashboard() {
     cancelEdit()
   }
 
-  const mySets = sets.filter(s => s.ownerId === user.id)
+  const mySets = sets.filter(s => s.ownerId === user.id && !s.copiedFromSetId)
+  const sharedWithMe = sets.filter(s => s.ownerId === user.id && s.copiedFromSetId)
 
   const handleCreateClass = async (e) => {
     e.preventDefault()
@@ -57,6 +60,33 @@ export default function TeacherDashboard() {
 
   if (activeSet) return (
     <StudyMenu set={activeSet} onBack={() => setActiveSet(null)} onCreateMissedSet={handleCreateMissedSet} />
+  )
+
+  const renderSetCard = (set) => (
+    <div key={set.id} onClick={() => setActiveSet(set)} className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm hover:shadow-md hover:border-crimson-200 transition-all cursor-pointer group flex flex-col touch-manipulation">
+      <div className="flex justify-between items-start mb-4">
+        <h3 className="text-xl font-bold text-slate-800 group-hover:text-crimson-600 transition-colors line-clamp-2">{set.title}</h3>
+        <div className="flex gap-1">
+          <button onClick={e => { e.stopPropagation(); setSharingSet(set) }} className="p-2 text-slate-400 hover:text-crimson-600 hover:bg-crimson-50 rounded-lg touch-manipulation"><Share2 size={18} /></button>
+          <button onClick={e => { e.stopPropagation(); navigate(`/sets/${set.id}/edit`) }} className="p-2 text-slate-400 hover:text-crimson-600 hover:bg-crimson-50 rounded-lg touch-manipulation"><Edit3 size={18} /></button>
+          <button onClick={e => handleDeleteSet(set.id, e)} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg touch-manipulation"><Trash2 size={18} /></button>
+        </div>
+      </div>
+      {set.copiedFrom && (
+        <div className="flex flex-wrap gap-1 mb-3">
+          <span className="text-xs bg-violet-50 text-violet-700 px-2 py-0.5 rounded-full">Shared by {set.copiedFrom.owner.displayName}</span>
+        </div>
+      )}
+      {set.shares?.length > 0 && (
+        <div className="flex flex-wrap gap-1 mb-3">
+          {set.shares.map(sh => <span key={sh.classId} className="text-xs bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full">{sh.class.name}</span>)}
+        </div>
+      )}
+      <div className="mt-auto pt-4 border-t border-slate-100 flex items-center justify-between">
+        <span className="text-sm font-medium text-slate-500 bg-slate-100 px-3 py-1 rounded-full flex items-center gap-1.5"><Layers size={14} /> {set.cards.length} Cards</span>
+        <span className="text-crimson-600 font-medium text-sm flex items-center gap-1 group-hover:translate-x-1 transition-transform">Play <Play size={16} /></span>
+      </div>
+    </div>
   )
 
   return (
@@ -155,29 +185,28 @@ export default function TeacherDashboard() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {mySets.map(set => (
-              <div key={set.id} onClick={() => setActiveSet(set)} className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm hover:shadow-md hover:border-crimson-200 transition-all cursor-pointer group flex flex-col touch-manipulation">
-                <div className="flex justify-between items-start mb-4">
-                  <h3 className="text-xl font-bold text-slate-800 group-hover:text-crimson-600 transition-colors line-clamp-2">{set.title}</h3>
-                  <div className="flex gap-1">
-                    <button onClick={e => { e.stopPropagation(); navigate(`/sets/${set.id}/edit`) }} className="p-2 text-slate-400 hover:text-crimson-600 hover:bg-crimson-50 rounded-lg touch-manipulation"><Edit3 size={18} /></button>
-                    <button onClick={e => handleDeleteSet(set.id, e)} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg touch-manipulation"><Trash2 size={18} /></button>
-                  </div>
-                </div>
-                {set.shares?.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mb-3">
-                    {set.shares.map(sh => <span key={sh.classId} className="text-xs bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full">{sh.class.name}</span>)}
-                  </div>
-                )}
-                <div className="mt-auto pt-4 border-t border-slate-100 flex items-center justify-between">
-                  <span className="text-sm font-medium text-slate-500 bg-slate-100 px-3 py-1 rounded-full flex items-center gap-1.5"><Layers size={14} /> {set.cards.length} Cards</span>
-                  <span className="text-crimson-600 font-medium text-sm flex items-center gap-1 group-hover:translate-x-1 transition-transform">Play <Play size={16} /></span>
-                </div>
-              </div>
-            ))}
+            {mySets.map(renderSetCard)}
           </div>
         )}
       </section>
+
+      {/* Shared with Me */}
+      {sharedWithMe.length > 0 && (
+        <section>
+          <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2 mb-4"><Share2 size={20} className="text-crimson-600" /> Shared with Me</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {sharedWithMe.map(renderSetCard)}
+          </div>
+        </section>
+      )}
+
+      {sharingSet && (
+        <ShareSetModal
+          setTitle={sharingSet.title}
+          onClose={() => setSharingSet(null)}
+          onShare={(teacherId) => shareSet(sharingSet.id, teacherId)}
+        />
+      )}
     </div>
   )
 }

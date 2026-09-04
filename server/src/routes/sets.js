@@ -25,6 +25,7 @@ router.get('/', requireAuth, async (req, res, next) => {
         cards: { orderBy: { position: 'asc' } },
         owner: { select: { id: true, displayName: true, role: true } },
         shares: { include: { class: { select: { id: true, name: true } } } },
+        copiedFrom: { select: { id: true, title: true, owner: { select: { displayName: true } } } },
       },
       orderBy: { createdAt: 'desc' },
     })
@@ -126,6 +127,51 @@ router.put('/:id', requireAuth, async (req, res, next) => {
     })
 
     res.json(updated)
+  } catch (err) { next(err) }
+})
+
+// POST /api/sets/:id/share — copy a set into another teacher's own sets (owner-only on the source)
+router.post('/:id/share', requireAuth, async (req, res, next) => {
+  try {
+    const source = await prisma.wordSet.findUnique({
+      where: { id: req.params.id },
+      include: { cards: { orderBy: { position: 'asc' } } },
+    })
+    if (!source) return res.status(404).json({ error: 'Set not found' })
+    if (source.ownerId !== req.user.id) return res.status(403).json({ error: 'Forbidden' })
+
+    const { teacherId } = req.body
+    if (!teacherId) return res.status(400).json({ error: 'teacherId required' })
+    if (teacherId === req.user.id) return res.status(400).json({ error: 'Cannot share a set with yourself' })
+
+    const target = await prisma.user.findUnique({ where: { id: teacherId } })
+    if (!target || !target.active || !['teacher', 'admin'].includes(target.role)) {
+      return res.status(400).json({ error: 'Target must be an active teacher' })
+    }
+
+    const copy = await prisma.wordSet.create({
+      data: {
+        title: source.title,
+        ownerId: teacherId,
+        isPublic: false,
+        isSpanish: source.isSpanish,
+        copiedFromSetId: source.id,
+        cards: {
+          create: source.cards.map(c => ({
+            term: c.term,
+            definition: c.definition,
+            position: c.position,
+            hint: c.hint,
+            imageUrl: c.imageUrl,
+            exampleSentence: c.exampleSentence,
+            uploadedImageUrl: c.uploadedImageUrl,
+          })),
+        },
+      },
+      include: { cards: { orderBy: { position: 'asc' } } },
+    })
+
+    res.status(201).json(copy)
   } catch (err) { next(err) }
 })
 

@@ -50,6 +50,18 @@ router.get('/students', requireTeacher, async (req, res, next) => {
   } catch (err) { next(err) }
 })
 
+// GET /api/classes/teachers — all other active teachers/admins for the set-sharing picker
+router.get('/teachers', requireTeacher, async (req, res, next) => {
+  try {
+    const teachers = await prisma.user.findMany({
+      where: { role: { in: ['teacher', 'admin'] }, active: true, id: { not: req.user.id } },
+      select: { id: true, email: true, displayName: true, photoUrl: true },
+      orderBy: { displayName: 'asc' },
+    })
+    res.json(teachers)
+  } catch (err) { next(err) }
+})
+
 // PUT /api/classes/:id — rename a class
 router.put('/:id', requireTeacher, async (req, res, next) => {
   try {

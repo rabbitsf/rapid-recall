@@ -39,5 +39,9 @@ export function useSets() {
     setSets(prev => prev.filter(s => s.id !== id))
   }
 
-  return { sets, loading, error, saveSet, deleteSet, refetch: fetchSets }
+  const shareSet = async (id, teacherId) => {
+    return apiFetch(`/api/sets/${id}/share`, { method: 'POST', body: JSON.stringify({ teacherId }) })
+  }
+
+  return { sets, loading, error, saveSet, deleteSet, shareSet, refetch: fetchSets }
 }

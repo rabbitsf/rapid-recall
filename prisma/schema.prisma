@@ -100,17 +100,20 @@ model ClassMember {
 }
 
 model WordSet {
-  id        String   @id @default(uuid())
-  title     String
-  ownerId   String   @map("owner_id")
-  isPublic  Boolean  @default(false) @map("is_public")
-  isSpanish Boolean  @default(false) @map("is_spanish")
-  createdAt DateTime @default(now()) @map("created_at")
+  id              String   @id @default(uuid())
+  title           String
+  ownerId         String   @map("owner_id")
+  isPublic        Boolean  @default(false) @map("is_public")
+  isSpanish       Boolean  @default(false) @map("is_spanish")
+  copiedFromSetId String?  @map("copied_from_set_id")
+  createdAt       DateTime @default(now()) @map("created_at")
 
-  owner   User            @relation(fields: [ownerId], references: [id])
-  cards   Card[]
-  shares  SetClassShare[]
-  results GameResult[]
+  owner      User            @relation(fields: [ownerId], references: [id])
+  cards      Card[]
+  shares     SetClassShare[]
+  results    GameResult[]
+  copiedFrom WordSet?        @relation("SetCopy", fields: [copiedFromSetId], references: [id], onDelete: SetNull)
+  copies     WordSet[]       @relation("SetCopy")
 
   @@map("word_sets")
 }
