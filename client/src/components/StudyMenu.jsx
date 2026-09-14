@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { ArrowLeft, BookOpen, Zap, CheckCircle2, Keyboard, Timer, Layers, PenLine } from 'lucide-react'
 import { useStudyLogs } from '../hooks/useStudyLogs.js'
 import FlashcardsMode from './games/FlashcardsMode.jsx'
+import StartSideModal from './StartSideModal.jsx'
 import MatchGame from './games/MatchGame.jsx'
 import QuizGame from './games/QuizGame.jsx'
 import TypeGame from './games/TypeGame.jsx'
@@ -24,6 +25,8 @@ function today() {
 
 export default function StudyMenu({ set, onBack, onCreateMissedSet }) {
   const [game, setGame] = useState(null)
+  const [startSide, setStartSide] = useState('term')
+  const [showStartSideModal, setShowStartSideModal] = useState(false)
   const startRef = useRef(null)
   const { updateLog, logs } = useStudyLogs()
 
@@ -48,7 +51,7 @@ export default function StudyMenu({ set, onBack, onCreateMissedSet }) {
     setGame(null)
   }
 
-  if (game === 'flashcards') return <FlashcardsMode set={set} onBack={handleBack} />
+  if (game === 'flashcards') return <FlashcardsMode set={set} onBack={handleBack} startSide={startSide} />
   if (game === 'match') return <MatchGame set={set} onBack={handleBack} onCreateMissedSet={handleCreateMissedSet} />
   if (game === 'quiz') return <QuizGame set={set} onBack={handleBack} onCreateMissedSet={handleCreateMissedSet} />
   if (game === 'type') return <TypeGame set={set} onBack={handleBack} onCreateMissedSet={handleCreateMissedSet} />
@@ -68,8 +71,12 @@ export default function StudyMenu({ set, onBack, onCreateMissedSet }) {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {GAMES.map(g => {
           const Icon = g.icon
+          const handlePlay = () => {
+            if (g.id === 'flashcards') setShowStartSideModal(true)
+            else setGame(g.id)
+          }
           return (
-            <div key={g.id} onClick={() => setGame(g.id)} className={`bg-white rounded-3xl p-6 border-2 border-transparent hover:border-${g.color}-500 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer group text-center flex flex-col items-center touch-manipulation select-none`}>
+            <div key={g.id} onClick={handlePlay} className={`bg-white rounded-3xl p-6 border-2 border-transparent hover:border-${g.color}-500 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer group text-center flex flex-col items-center touch-manipulation select-none`}>
               <div className={`w-16 h-16 rounded-2xl bg-${g.color}-100 text-${g.color}-600 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform`}><Icon size={32} /></div>
               <h4 className="text-xl font-bold text-slate-800 mb-2">{g.title}</h4>
               <p className="text-slate-500 text-sm mb-6 flex-grow">{g.desc}</p>
@@ -78,6 +85,17 @@ export default function StudyMenu({ set, onBack, onCreateMissedSet }) {
           )
         })}
       </div>
+
+      {showStartSideModal && (
+        <StartSideModal
+          onClose={() => setShowStartSideModal(false)}
+          onChoose={(side) => {
+            setStartSide(side)
+            setShowStartSideModal(false)
+            setGame('flashcards')
+          }}
+        />
+      )}
     </div>
   )
 }

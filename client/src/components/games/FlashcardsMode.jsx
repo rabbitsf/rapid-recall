@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
 import { ArrowLeft, Volume2, Lightbulb, Image } from 'lucide-react'
 
-export default function FlashcardsMode({ set, onBack }) {
+export default function FlashcardsMode({ set, onBack, startSide = 'term' }) {
   const [index, setIndex] = useState(0)
-  const [flipped, setFlipped] = useState(false)
+  const [flipped, setFlipped] = useState(startSide === 'definition')
   const [shownHint, setShownHint] = useState(false)
   const [hintLoading, setHintLoading] = useState(false)
   const [imageLoading, setImageLoading] = useState(false)
@@ -29,7 +29,7 @@ export default function FlashcardsMode({ set, onBack }) {
   }, [set.id])
 
   const go = (dir) => {
-    setFlipped(false)
+    setFlipped(startSide === 'definition')
     setShownHint(false)
     setHintError(false)
     setTimeout(() => setIndex(i => (i + dir + cards.length) % cards.length), 150)
