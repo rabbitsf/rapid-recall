@@ -209,6 +209,10 @@ export default function FlashcardsMode({ set, onBack, startSide = 'term' }) {
             <p className="text-2xl md:text-3xl font-medium text-center leading-relaxed break-words overflow-y-auto max-h-full">
               {card.definition}
             </p>
+
+            <p className="absolute bottom-5 left-1/2 -translate-x-1/2 text-white/60 font-medium text-xs tracking-widest uppercase whitespace-nowrap">
+              Tap to flip
+            </p>
           </div>
         </div>
       </div>
