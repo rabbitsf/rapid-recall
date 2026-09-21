@@ -6,7 +6,10 @@ import { useGameResults } from '../../hooks/useGameResults.js'
 
 const TIME_LIMIT = 10
 
-export default function BubblePopGame({ set, onBack, onCreateMissedSet }) {
+// Lenient compare for typed answers (case, punctuation, extra whitespace ignored)
+const norm = (t) => t.toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, '').replace(/\s+/g, ' ').trim()
+
+export default function BubblePopGame({ set, onBack, onCreateMissedSet, startSide = 'definition' }) {
   const [questions, setQuestions] = useState([])
   const [index, setIndex] = useState(0)
   const [input, setInput] = useState('')
@@ -78,11 +81,14 @@ export default function BubblePopGame({ set, onBack, onCreateMissedSet }) {
   }
 
   const q = questions[index]
+  const showTerm = startSide === 'term'
+  const prompt = showTerm ? q.term : q.definition
+  const answer = showTerm ? q.definition : q.term
 
   const handleInput = (e) => {
     if (status !== 'playing') return
     setInput(e.target.value)
-    if (e.target.value.trim().toLowerCase() === q.term.trim().toLowerCase()) {
+    if (norm(e.target.value) === norm(answer)) {
       setStatus('correct'); setScore(s => s + 1)
       setTimeout(advance, 800)
     }
@@ -107,7 +113,7 @@ export default function BubblePopGame({ set, onBack, onCreateMissedSet }) {
 
       <div className="flex-1 flex flex-col items-center justify-center relative overflow-hidden py-10 select-none">
         <div className={`w-64 h-64 sm:w-80 sm:h-80 rounded-full border-4 flex flex-col items-center justify-center p-8 text-center shadow-lg transition-all duration-[800ms] ease-out z-10 ${bubbleCls}`} style={{ transform: bubbleScale ? `scale(${bubbleScale})` : undefined }}>
-          {status === 'playing' ? (<><span className="text-xs font-bold uppercase tracking-wider text-cyan-600/70 mb-2">Pop in {timeLeft}s</span><h2 className="text-xl sm:text-2xl font-bold break-words">{q.definition}</h2></>)
+          {status === 'playing' ? (<><span className="text-xs font-bold uppercase tracking-wider text-cyan-600/70 mb-2">Pop in {timeLeft}s</span><h2 className="text-xl sm:text-2xl font-bold break-words">{prompt}</h2></>)
             : status === 'correct' ? <CheckCircle2 size={64} className="text-emerald-500" />
             : <h2 className="text-3xl font-black text-red-600 uppercase italic tracking-widest shake">Popped!</h2>}
         </div>
@@ -115,8 +121,8 @@ export default function BubblePopGame({ set, onBack, onCreateMissedSet }) {
         {status === 'popped' && (
           <div className="absolute inset-0 flex items-center justify-center z-20 animate-in fade-in">
             <div className="bg-white/95 backdrop-blur-sm p-8 rounded-3xl shadow-2xl border border-red-100 text-center w-full max-w-sm">
-              <p className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-2">The word was</p>
-              <p className="text-3xl font-black text-emerald-600 mb-8">{q.term}</p>
+              <p className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-2">{showTerm ? 'The definition was' : 'The word was'}</p>
+              <p className={`${showTerm ? 'text-xl' : 'text-3xl'} font-black text-emerald-600 mb-8`}>{answer}</p>
               <button onClick={advance} autoFocus className="w-full py-5 bg-red-100 hover:bg-red-200 text-red-700 font-bold text-lg rounded-xl transition-colors touch-manipulation">Next Word →</button>
             </div>
           </div>
@@ -126,7 +132,7 @@ export default function BubblePopGame({ set, onBack, onCreateMissedSet }) {
       <div className="mt-auto pt-6 relative z-30">
         <input
           type="text" value={input} onChange={handleInput} disabled={status !== 'playing'}
-          placeholder="Type fast to save the bubble..." autoFocus autoCapitalize="none" autoCorrect="off" spellCheck="false" autoComplete="off"
+          placeholder={showTerm ? "Type the definition..." : "Type fast to save the bubble..."} autoFocus autoCapitalize="none" autoCorrect="off" spellCheck="false" autoComplete="off"
           className={`w-full text-[16px] sm:text-xl p-5 sm:p-6 rounded-2xl border-2 outline-none transition-all ${status === 'playing' ? 'bg-white border-slate-200 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-500/10 text-slate-800 shadow-sm' : status === 'correct' ? 'bg-emerald-50 border-emerald-500 text-emerald-800' : 'bg-red-50 border-red-500 text-red-800 opacity-50 cursor-not-allowed'}`}
         />
       </div>

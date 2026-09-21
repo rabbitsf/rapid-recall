@@ -9,6 +9,8 @@ import TypeGame from './games/TypeGame.jsx'
 import BubblePopGame from './games/BubblePopGame.jsx'
 import ApplicationsMode from './games/ApplicationsMode.jsx'
 
+const START_SIDE_GAMES = ['flashcards', 'bubble-pop']
+
 const GAMES = [
   { id: 'flashcards', title: 'Flashcards', icon: BookOpen, color: 'blue', desc: 'Review at your own pace.' },
   { id: 'match', title: 'Match Game', icon: Zap, color: 'emerald', desc: 'Race to match terms with definitions.' },
@@ -26,7 +28,7 @@ function today() {
 export default function StudyMenu({ set, onBack, onCreateMissedSet }) {
   const [game, setGame] = useState(null)
   const [startSide, setStartSide] = useState('term')
-  const [showStartSideModal, setShowStartSideModal] = useState(false)
+  const [pendingGame, setPendingGame] = useState(null) // game id awaiting a start-side choice
   const startRef = useRef(null)
   const { updateLog, logs } = useStudyLogs()
 
@@ -55,7 +57,7 @@ export default function StudyMenu({ set, onBack, onCreateMissedSet }) {
   if (game === 'match') return <MatchGame set={set} onBack={handleBack} onCreateMissedSet={handleCreateMissedSet} />
   if (game === 'quiz') return <QuizGame set={set} onBack={handleBack} onCreateMissedSet={handleCreateMissedSet} />
   if (game === 'type') return <TypeGame set={set} onBack={handleBack} onCreateMissedSet={handleCreateMissedSet} />
-  if (game === 'bubble-pop') return <BubblePopGame set={set} onBack={handleBack} onCreateMissedSet={handleCreateMissedSet} />
+  if (game === 'bubble-pop') return <BubblePopGame set={set} onBack={handleBack} onCreateMissedSet={handleCreateMissedSet} startSide={startSide} />
   if (game === 'applications') return <ApplicationsMode set={set} onBack={handleBack} onCreateMissedSet={handleCreateMissedSet} />
 
   return (
@@ -72,7 +74,7 @@ export default function StudyMenu({ set, onBack, onCreateMissedSet }) {
         {GAMES.map(g => {
           const Icon = g.icon
           const handlePlay = () => {
-            if (g.id === 'flashcards') setShowStartSideModal(true)
+            if (START_SIDE_GAMES.includes(g.id)) setPendingGame(g.id)
             else setGame(g.id)
           }
           return (
@@ -86,13 +88,13 @@ export default function StudyMenu({ set, onBack, onCreateMissedSet }) {
         })}
       </div>
 
-      {showStartSideModal && (
+      {pendingGame && (
         <StartSideModal
-          onClose={() => setShowStartSideModal(false)}
+          onClose={() => setPendingGame(null)}
           onChoose={(side) => {
             setStartSide(side)
-            setShowStartSideModal(false)
-            setGame('flashcards')
+            setGame(pendingGame)
+            setPendingGame(null)
           }}
         />
       )}
