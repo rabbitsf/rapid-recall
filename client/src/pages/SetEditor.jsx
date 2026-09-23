@@ -187,9 +187,9 @@ export default function SetEditor() {
             <div key={card.id} className="group relative flex flex-col md:flex-row gap-4 p-4 rounded-2xl border border-slate-200 bg-white hover:border-crimson-200 transition-colors">
               <div className="absolute -left-3 top-4 bg-slate-100 text-slate-500 text-xs font-bold px-2 py-1 rounded-full">{i + 1}</div>
               <input type="text" value={card.term} onChange={e => updateCard(card.id, 'term', e.target.value)} placeholder="Term"
-                className="flex-1 font-medium px-4 py-3 bg-slate-50 border-b-2 border-slate-200 focus:border-crimson-500 focus:bg-white outline-none transition-all rounded-t-lg" />
+                className="flex-1 min-w-0 font-medium px-4 py-3 bg-slate-50 border-b-2 border-slate-200 focus:border-crimson-500 focus:bg-white outline-none transition-all rounded-t-lg" />
               <input type="text" value={card.definition} onChange={e => updateCard(card.id, 'definition', e.target.value)} placeholder="Definition"
-                className="flex-1 px-4 py-3 bg-slate-50 border-b-2 border-slate-200 focus:border-crimson-500 focus:bg-white outline-none transition-all rounded-t-lg" />
+                className="flex-1 min-w-0 px-4 py-3 bg-slate-50 border-b-2 border-slate-200 focus:border-crimson-500 focus:bg-white outline-none transition-all rounded-t-lg" />
               <div className="flex items-center gap-2 shrink-0">
                 {card.uploadedImageUrl
                   ? <img src={card.uploadedImageUrl} alt="" className="w-12 h-12 rounded-lg object-cover border border-slate-200 shrink-0" />
