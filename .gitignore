@@ -3,4 +3,6 @@ node_modules/
 .env.local
 dist/
 .DS_Store
+# AI workflow artifacts — local only, never commit
 docs/
+CLAUDE.md
