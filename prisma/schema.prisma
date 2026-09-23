@@ -128,6 +128,7 @@ model Card {
   imageUrl         String? @map("image_url")
   exampleSentence  String? @map("example_sentence")
   uploadedImageUrl String? @map("uploaded_image_url")
+  uploadedAudioUrl String? @map("uploaded_audio_url")
 
   set WordSet @relation(fields: [setId], references: [id], onDelete: Cascade)
 

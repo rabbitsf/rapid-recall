@@ -1,13 +1,17 @@
 import { useState, useEffect, useRef } from 'react'
 import { flushSync } from 'react-dom'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Plus, Trash2, Upload, X, Image } from 'lucide-react'
+import { Plus, Trash2, Upload, X, Image, Mic, Square, Volume2 } from 'lucide-react'
 import { useSets } from '../hooks/useSets.js'
+import { useAuth } from '../context/AuthContext.jsx'
+import { canRecordAudio, playAudioUrl, startRecording } from '../utils/audio.js'
 
 export default function SetEditor() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { sets, saveSet } = useSets()
+  const { user } = useAuth()
+  const canRecord = ['teacher', 'admin'].includes(user?.role) && canRecordAudio()
 
   const existing = id ? sets.find(s => s.id === id) : null
   const [title, setTitle] = useState(existing?.title || '')
@@ -18,7 +22,11 @@ export default function SetEditor() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
   const fileInputRefs = useRef({})
-  const savedSetIdRef = useRef(null)          // ID of set auto-saved during image upload
+  const savedSetIdRef = useRef(null)          // ID of set auto-saved during image/audio upload
+  const recorderRef = useRef(null)
+  const [recordingCardId, setRecordingCardId] = useState(null)
+
+  useEffect(() => () => recorderRef.current?.cancel(), [])
 
   useEffect(() => {
     if (existing) {
@@ -59,27 +67,78 @@ export default function SetEditor() {
     } catch { setError('Image upload failed') }
   }
 
-  const handleImageButtonClick = async (card, i) => {
-    if (card.id.includes('-')) {
-      // Already saved — open picker directly
-      fileInputRefs.current[card.id]?.click()
-      return
-    }
-    // Unsaved card — auto-save first, then open picker
-    if (!title.trim()) { setError('Please enter a title before uploading images.'); return }
+  // Uploads need a server card ID. Saved cards are returned as-is; unsaved ones trigger an auto-save
+  // of the set first. Returns the card's server ID, or null if the set can't be saved yet.
+  const ensureCardSaved = async (card, what) => {
+    if (card.id.includes('-')) return card.id
+    if (!title.trim()) { setError(`Please enter a title before ${what}.`); return null }
     const valid = cards.filter(c => c.term.trim() && c.definition.trim())
-    if (valid.length < 2) { setError('Please add at least 2 complete cards before uploading images.'); return }
+    if (valid.length < 2) { setError(`Please add at least 2 complete cards before ${what}.`); return null }
     setSaving(true)
     setError(null)
     try {
       const savedSet = await saveSet({ id: existing?.id ?? savedSetIdRef.current, title, cards: valid, isSpanish })
       savedSetIdRef.current = savedSet.id
       const validIdx = valid.findIndex(c => c.id === card.id)
-      const targetCard = validIdx >= 0 ? savedSet.cards[validIdx] : null
-      flushSync(() => setCards(savedSet.cards))  // ensure DOM + refs update before clicking
-      if (targetCard) fileInputRefs.current[targetCard.id]?.click()
-    } catch (err) { setError(err.message) }
+      flushSync(() => setCards(savedSet.cards))  // ensure DOM + refs update before continuing
+      return validIdx >= 0 ? savedSet.cards[validIdx].id : null
+    } catch (err) { setError(err.message); return null }
     finally { setSaving(false) }
+  }
+
+  const handleImageButtonClick = async (card) => {
+    // Already saved — open picker synchronously (iOS Safari requires it inside the tap gesture)
+    if (card.id.includes('-')) { fileInputRefs.current[card.id]?.click(); return }
+    const cardId = await ensureCardSaved(card, 'uploading images')
+    if (cardId) fileInputRefs.current[cardId]?.click()
+  }
+
+  const handleAudioUpload = async (cardId, blob) => {
+    const formData = new FormData()
+    formData.append('audio', blob, 'pronunciation.wav')
+    try {
+      const res = await fetch(`/api/uploads/cards/${cardId}/audio`, { method: 'POST', credentials: 'include', body: formData })
+      const data = await res.json()
+      if (data.uploadedAudioUrl) updateCard(cardId, 'uploadedAudioUrl', data.uploadedAudioUrl)
+      else setError(data.error || 'Recording upload failed')
+    } catch { setError('Recording upload failed') }
+  }
+
+  const handleRecordClick = async (card) => {
+    if (recordingCardId) {
+      const cardId = recordingCardId
+      const recorder = recorderRef.current
+      recorderRef.current = null
+      setRecordingCardId(null)
+      try {
+        const blob = await recorder.stop()
+        if (blob) await handleAudioUpload(cardId, blob)
+      } catch { setError('Could not process the recording. Please try again.') }
+      return
+    }
+    const cardId = await ensureCardSaved(card, 'recording')
+    if (!cardId) return
+    setError(null)
+    try {
+      recorderRef.current = await startRecording({
+        onAutoStop: blob => {
+          recorderRef.current = null
+          setRecordingCardId(null)
+          handleAudioUpload(cardId, blob)
+        },
+      })
+      setRecordingCardId(cardId)
+    } catch {
+      setError('Microphone unavailable. Please allow microphone access and try again.')
+    }
+  }
+
+  const handleDeleteAudio = async (cardId) => {
+    try {
+      const res = await fetch(`/api/uploads/cards/${cardId}/audio`, { method: 'DELETE', credentials: 'include' })
+      if (res.ok) updateCard(cardId, 'uploadedAudioUrl', null)
+      else setError((await res.json()).error || 'Could not delete recording')
+    } catch { setError('Could not delete recording') }
   }
 
   const handleSave = async () => {
@@ -138,11 +197,37 @@ export default function SetEditor() {
                 <input type="file" accept="image/*" className="hidden"
                   ref={el => { fileInputRefs.current[card.id] = el }}
                   onChange={e => { const f = e.target.files[0]; if (f) handleImageUpload(card.id, f); e.target.value = '' }} />
-                <button type="button" onClick={() => handleImageButtonClick(card, i)}
+                <button type="button" onClick={() => handleImageButtonClick(card)}
                   title={card.uploadedImageUrl ? 'Replace image' : 'Upload image'}
                   className="p-2 text-slate-400 hover:text-crimson-600 hover:bg-crimson-50 rounded-lg transition-colors touch-manipulation">
                   <Image size={20} />
                 </button>
+                {canRecord && (recordingCardId === card.id
+                  ? <button type="button" onClick={() => handleRecordClick(card)} title="Stop recording"
+                      className="p-2 text-white bg-red-500 hover:bg-red-600 rounded-lg animate-pulse transition-colors touch-manipulation">
+                      <Square size={20} />
+                    </button>
+                  : <>
+                      {card.uploadedAudioUrl && (
+                        <>
+                          <button type="button" onClick={() => playAudioUrl(card.uploadedAudioUrl).catch(() => setError('Could not play recording'))}
+                            title="Play your recording"
+                            className="p-2 text-crimson-600 bg-crimson-50 hover:bg-crimson-100 rounded-lg transition-colors touch-manipulation">
+                            <Volume2 size={20} />
+                          </button>
+                          <button type="button" onClick={() => handleDeleteAudio(card.id)} disabled={!!recordingCardId}
+                            title="Delete recording"
+                            className="p-1 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg disabled:opacity-40 transition-colors touch-manipulation">
+                            <X size={16} />
+                          </button>
+                        </>
+                      )}
+                      <button type="button" onClick={() => handleRecordClick(card)} disabled={!!recordingCardId || saving}
+                        title={card.uploadedAudioUrl ? 'Re-record pronunciation' : 'Record pronunciation'}
+                        className="p-2 text-slate-400 hover:text-crimson-600 hover:bg-crimson-50 rounded-lg disabled:opacity-40 transition-colors touch-manipulation">
+                        <Mic size={20} />
+                      </button>
+                    </>)}
               </div>
               <button onClick={() => removeCard(card.id)} className="p-4 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors touch-manipulation"><Trash2 size={20} /></button>
             </div>

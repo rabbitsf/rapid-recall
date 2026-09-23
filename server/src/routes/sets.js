@@ -97,6 +97,7 @@ router.put('/:id', requireAuth, async (req, res, next) => {
         imageUrl: c.imageUrl,
         exampleSentence: c.exampleSentence,
         uploadedImageUrl: c.uploadedImageUrl,
+        uploadedAudioUrl: c.uploadedAudioUrl,
       }
     }
 
@@ -119,6 +120,7 @@ router.put('/:id', requireAuth, async (req, res, next) => {
               imageUrl: ai.imageUrl ?? null,
               exampleSentence: ai.exampleSentence ?? null,
               uploadedImageUrl: ai.uploadedImageUrl ?? null,
+              uploadedAudioUrl: ai.uploadedAudioUrl ?? null,
             }
           }),
         },
@@ -165,6 +167,7 @@ router.post('/:id/share', requireAuth, async (req, res, next) => {
             imageUrl: c.imageUrl,
             exampleSentence: c.exampleSentence,
             uploadedImageUrl: c.uploadedImageUrl,
+            uploadedAudioUrl: c.uploadedAudioUrl,
           })),
         },
       },

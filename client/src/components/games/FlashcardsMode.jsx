@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { ArrowLeft, Volume2, Lightbulb, Image } from 'lucide-react'
+import { playAudioUrl } from '../../utils/audio.js'
 
 export default function FlashcardsMode({ set, onBack, startSide = 'term' }) {
   const [index, setIndex] = useState(0)
@@ -40,22 +41,16 @@ export default function FlashcardsMode({ set, onBack, startSide = 'term' }) {
   // undefined = button shows; '' = no image found (button hidden); 'https://...' = shown
   const currentImage = images[card.id]
 
+  // Teacher's own recording first; otherwise MW API (Spanish) → browser TTS
   const speakTerm = async (e) => {
     e.stopPropagation()
+    if (card.uploadedAudioUrl) {
+      try { await playAudioUrl(card.uploadedAudioUrl); return } catch {}
+    }
     if (set.isSpanish) {
       try {
-        const res = await fetch(`/api/pronunciation/spanish?word=${encodeURIComponent(card.term)}`, { credentials: 'include' })
-        if (res.ok) {
-          // Use Web Audio API to bypass media-src CSP restriction on blob URLs
-          const ctx = new AudioContext()
-          const buf = await res.arrayBuffer()
-          const decoded = await ctx.decodeAudioData(buf)
-          const src = ctx.createBufferSource()
-          src.buffer = decoded
-          src.connect(ctx.destination)
-          src.start()
-          return
-        }
+        await playAudioUrl(`/api/pronunciation/spanish?word=${encodeURIComponent(card.term)}`)
+        return
       } catch {}
       // Fall back to browser TTS if MW has no entry for this term
       window.speechSynthesis.cancel()
