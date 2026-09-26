@@ -29,13 +29,29 @@ export async function exchangeCode(code) {
   return tokens
 }
 
-// Build a single authenticated Google Classroom client from the admin's stored token.
-// Returns null if no admin has connected Classroom.
-export async function getAdminClassroomClient() {
-  const token = await prisma.googleToken.findFirst({
-    where: { user: { role: 'admin', active: true } },
+// Resolve the Google token for a user: their own first, else fall back to an active admin's.
+// Since the 2026-27 school year each course is owned only by its teacher, so the shared
+// admin account no longer sees every class — teachers must connect their own account.
+async function resolveToken(userId) {
+  const own = await prisma.googleToken.findUnique({
+    where: { userId },
+    include: { user: { select: { displayName: true } } },
   })
-  if (!token) return null
+  if (own) return { token: own, isOwn: true }
+
+  const admin = await prisma.googleToken.findFirst({
+    where: { user: { role: 'admin', active: true } },
+    include: { user: { select: { displayName: true } } },
+  })
+  return admin ? { token: admin, isOwn: false } : null
+}
+
+// Build an authenticated Google Classroom client for a user (own token, else admin fallback).
+// Returns null if no usable token exists.
+export async function getClassroomClient(userId) {
+  const resolved = await resolveToken(userId)
+  if (!resolved) return null
+  const { token } = resolved
 
   const auth = makeOAuth2Client()
   auth.setCredentials({
@@ -49,22 +65,23 @@ export async function getAdminClassroomClient() {
     const { credentials } = await auth.refreshAccessToken()
     await prisma.googleToken.update({
       where: { id: token.id },
-      data: { accessToken: credentials.access_token, expiresAt: new Date(credentials.expiry_date) },
+      data: {
+        accessToken: credentials.access_token,
+        refreshToken: credentials.refresh_token ?? undefined,
+        expiresAt: new Date(credentials.expiry_date),
+      },
     })
-    auth.setCredentials(credentials)
+    auth.setCredentials({ ...credentials, refresh_token: credentials.refresh_token ?? token.refreshToken })
   }
 
   return google.classroom({ version: 'v1', auth })
 }
 
-export async function getAdminConnectionStatus() {
-  const token = await prisma.googleToken.findFirst({
-    where: { user: { role: 'admin', active: true } },
-    include: { user: { select: { displayName: true } } },
-  })
-  return token
-    ? { connected: true, via: token.user.displayName }
-    : { connected: false, via: null }
+export async function getConnectionStatus(userId) {
+  const resolved = await resolveToken(userId)
+  return resolved
+    ? { connected: true, isOwn: resolved.isOwn, via: resolved.token.user.displayName }
+    : { connected: false, isOwn: false, via: null }
 }
 
 // Accept the client as a param (like gradebook) so token is fetched only once per request

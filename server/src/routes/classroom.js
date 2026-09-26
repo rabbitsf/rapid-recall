@@ -1,25 +1,25 @@
 import { Router } from 'express'
 import crypto from 'crypto'
 import prisma from '../db.js'
-import { requireTeacher, requireAdmin } from '../middleware/requireAuth.js'
-import { getAuthUrl, exchangeCode, getAdminClassroomClient, getAdminConnectionStatus, listCourses } from '../google/classroom.js'
+import { requireTeacher } from '../middleware/requireAuth.js'
+import { getAuthUrl, exchangeCode, getClassroomClient, getConnectionStatus, listCourses } from '../google/classroom.js'
 import { syncCourse } from '../google/sync.js'
 
 const router = Router()
 
-router.get('/status', requireTeacher, async (_req, res, next) => {
+router.get('/status', requireTeacher, async (req, res, next) => {
   try {
-    res.json(await getAdminConnectionStatus())
+    res.json(await getConnectionStatus(req.user.id))
   } catch (err) { next(err) }
 })
 
-router.get('/connect', requireAdmin, (req, res) => {
+router.get('/connect', requireTeacher, (req, res) => {
   const state = crypto.randomBytes(16).toString('hex')
   req.session.classroomOAuthState = state
   res.redirect(getAuthUrl(state))
 })
 
-router.get('/callback', requireAdmin, async (req, res, next) => {
+router.get('/callback', requireTeacher, async (req, res, next) => {
   try {
     const { code, state, error } = req.query
     if (error || state !== req.session.classroomOAuthState) {
@@ -46,7 +46,7 @@ router.get('/callback', requireAdmin, async (req, res, next) => {
   } catch (err) { next(err) }
 })
 
-router.delete('/disconnect', requireAdmin, async (req, res, next) => {
+router.delete('/disconnect', requireTeacher, async (req, res, next) => {
   try {
     await prisma.googleToken.deleteMany({ where: { userId: req.user.id } })
     res.json({ ok: true })
@@ -55,8 +55,8 @@ router.delete('/disconnect', requireAdmin, async (req, res, next) => {
 
 router.get('/courses', requireTeacher, async (req, res, next) => {
   try {
-    const client = await getAdminClassroomClient()
-    if (!client) return res.status(400).json({ error: 'Google Classroom not connected. Ask an admin to connect.' })
+    const client = await getClassroomClient(req.user.id)
+    if (!client) return res.status(400).json({ error: 'Google Classroom not connected. Connect your Google account first.' })
 
     const courses = await listCourses(client)
 
@@ -79,7 +79,7 @@ router.get('/courses', requireTeacher, async (req, res, next) => {
 
 router.post('/sync/:courseId', requireTeacher, async (req, res, next) => {
   try {
-    const client = await getAdminClassroomClient()
+    const client = await getClassroomClient(req.user.id)
     if (!client) return res.status(400).json({ error: 'Google Classroom not connected' })
 
     const courses = await listCourses(client)

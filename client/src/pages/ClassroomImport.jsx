@@ -1,14 +1,11 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, RefreshCw, Link2, CheckCircle2, Download, Users, Unlink, ShieldCheck, Search } from 'lucide-react'
-import { useAuth } from '../context/AuthContext.jsx'
 
 export default function ClassroomImport() {
   const navigate = useNavigate()
-  const { user } = useAuth()
-  const isAdmin = user?.role === 'admin'
   const [connected, setConnected] = useState(null) // null = loading
-  const [connectionInfo, setConnectionInfo] = useState(null) // { own, via }
+  const [connectionInfo, setConnectionInfo] = useState(null) // { isOwn, via }
   const [courses, setCourses] = useState([])
   const [loading, setLoading] = useState(false)
   const [syncing, setSyncing] = useState(null) // courseId being synced
@@ -33,14 +30,9 @@ export default function ClassroomImport() {
     } finally { setLoading(false) }
   }, [])
 
-  useEffect(() => {
-    checkStatus()
-    // Handle OAuth return — check for error in URL
-    const params = new URLSearchParams(window.location.search)
-    if (params.get('error')) {
-      setConnected(false)
-    }
-  }, [checkStatus])
+  const [oauthError] = useState(() => !!new URLSearchParams(window.location.search).get('error'))
+
+  useEffect(() => { checkStatus() }, [checkStatus])
 
   useEffect(() => {
     if (connected) fetchCourses()
@@ -49,8 +41,8 @@ export default function ClassroomImport() {
   const disconnect = async () => {
     if (!window.confirm('Disconnect Google Classroom? You can reconnect at any time.')) return
     await fetch('/api/classroom/disconnect', { method: 'DELETE', credentials: 'include' })
-    setConnected(false)
     setCourses([])
+    checkStatus() // may fall back to the school's shared connection
   }
 
   const syncCourse = async (courseId) => {
@@ -90,40 +82,53 @@ export default function ClassroomImport() {
         </div>
       </div>
 
+      {oauthError && (
+        <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-xl">
+          Google connection failed or was cancelled. Please try again.
+        </div>
+      )}
+
       {!connected ? (
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-10 text-center">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-crimson-50 text-crimson-600 mb-4">
             <Link2 size={32} />
           </div>
           <h3 className="text-xl font-bold text-slate-800 mb-2">Google Classroom Not Connected</h3>
-          {isAdmin ? (
-            <>
-              <p className="text-slate-500 mb-6 max-w-sm mx-auto text-sm">
-                Connect the school's Google Classroom account once — all teachers will be able to import from it.
-              </p>
-              <a href="/api/classroom/connect"
-                className="inline-flex items-center gap-2 px-6 py-3 bg-crimson-600 hover:bg-crimson-700 text-white font-semibold rounded-xl transition-colors shadow-sm">
-                <ShieldCheck size={18} /> Connect as Admin
-              </a>
-            </>
-          ) : (
-            <p className="text-slate-500 max-w-sm mx-auto text-sm">
-              An admin needs to connect the school's Google Classroom account first. Contact your admin to set this up.
-            </p>
-          )}
+          <p className="text-slate-500 mb-6 max-w-sm mx-auto text-sm">
+            Connect your own Google account to see and import the classes you teach.
+          </p>
+          <a href="/api/classroom/connect"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-crimson-600 hover:bg-crimson-700 text-white font-semibold rounded-xl transition-colors shadow-sm">
+            <ShieldCheck size={18} /> Connect Google Account
+          </a>
         </div>
       ) : (
         <div className="space-y-4">
+          {!connectionInfo?.isOwn && (
+            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 flex items-center gap-4">
+              <div className="flex-1 text-sm text-amber-800">
+                <p className="font-semibold">Connect your own Google account</p>
+                <p className="mt-0.5">You're seeing classes from the school's shared connection, which only sees classes that account teaches. Connect your own account to see and import your classes.</p>
+              </div>
+              <a href="/api/classroom/connect"
+                className="shrink-0 inline-flex items-center gap-2 px-4 py-2 bg-crimson-600 hover:bg-crimson-700 text-white text-sm font-semibold rounded-xl transition-colors shadow-sm">
+                <ShieldCheck size={16} /> Connect
+              </a>
+            </div>
+          )}
+
           <div className="flex items-center justify-between">
             <p className="text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 px-4 py-2 rounded-xl flex items-center gap-2">
               <CheckCircle2 size={16} />
-              Connected via <strong>{connectionInfo?.via ?? 'admin'}</strong>
+              {connectionInfo?.isOwn
+                ? <>Connected as <strong>{connectionInfo.via}</strong></>
+                : <>Using school connection (<strong>{connectionInfo?.via ?? 'admin'}</strong>)</>}
             </p>
             <div className="flex items-center gap-3">
               <button onClick={fetchCourses} disabled={loading} className="flex items-center gap-2 text-sm text-slate-600 hover:text-crimson-600 transition-colors">
                 <RefreshCw size={15} className={loading ? 'animate-spin' : ''} /> Refresh
               </button>
-              {isAdmin && (
+              {connectionInfo?.isOwn && (
                 <button onClick={disconnect} className="flex items-center gap-2 text-sm text-slate-400 hover:text-red-500 transition-colors">
                   <Unlink size={15} /> Disconnect
                 </button>
