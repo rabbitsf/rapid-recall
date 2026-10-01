@@ -3,11 +3,9 @@ import { ArrowLeft, Trophy, CheckCircle2, Layers, RefreshCw, Timer } from 'lucid
 import { shuffleArray } from '../../utils/shuffleArray.js'
 import { launchConfetti } from '../../utils/confetti.js'
 import { useGameResults } from '../../hooks/useGameResults.js'
+import { normalizeAnswer } from '../../utils/normalizeAnswer.js'
 
 const TIME_LIMIT = 10
-
-// Lenient compare for typed answers (case, punctuation, extra whitespace ignored)
-const norm = (t) => t.toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, '').replace(/\s+/g, ' ').trim()
 
 export default function BubblePopGame({ set, onBack, onCreateMissedSet, startSide = 'definition' }) {
   const [questions, setQuestions] = useState([])
@@ -88,7 +86,7 @@ export default function BubblePopGame({ set, onBack, onCreateMissedSet, startSid
   const handleInput = (e) => {
     if (status !== 'playing') return
     setInput(e.target.value)
-    if (norm(e.target.value) === norm(answer)) {
+    if (normalizeAnswer(e.target.value) === normalizeAnswer(answer)) {
       setStatus('correct'); setScore(s => s + 1)
       setTimeout(advance, 800)
     }

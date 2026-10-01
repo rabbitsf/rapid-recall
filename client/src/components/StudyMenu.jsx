@@ -9,13 +9,13 @@ import TypeGame from './games/TypeGame.jsx'
 import BubblePopGame from './games/BubblePopGame.jsx'
 import ApplicationsMode from './games/ApplicationsMode.jsx'
 
-const START_SIDE_GAMES = ['flashcards', 'bubble-pop']
+const START_SIDE_GAMES = ['flashcards', 'type', 'bubble-pop']
 
 const GAMES = [
   { id: 'flashcards', title: 'Flashcards', icon: BookOpen, color: 'blue', desc: 'Review at your own pace.' },
   { id: 'match', title: 'Match Game', icon: Zap, color: 'emerald', desc: 'Race to match terms with definitions.' },
   { id: 'quiz', title: 'Practice Quiz', icon: CheckCircle2, color: 'gold', desc: 'Multiple choice questions.' },
-  { id: 'type', title: 'Type It', icon: Keyboard, color: 'orange', desc: 'Read the definition, type the term.' },
+  { id: 'type', title: 'Type It', icon: Keyboard, color: 'orange', desc: 'Read one side, type the other.' },
   { id: 'bubble-pop', title: 'Bubble Pop', icon: Timer, color: 'cyan', desc: 'Type before the bubble pops!' },
   { id: 'applications', title: 'Applications', icon: PenLine, color: 'purple', desc: 'Fill in the blank from an AI-generated sentence.' },
 ]
@@ -56,7 +56,7 @@ export default function StudyMenu({ set, onBack, onCreateMissedSet }) {
   if (game === 'flashcards') return <FlashcardsMode set={set} onBack={handleBack} startSide={startSide} />
   if (game === 'match') return <MatchGame set={set} onBack={handleBack} onCreateMissedSet={handleCreateMissedSet} />
   if (game === 'quiz') return <QuizGame set={set} onBack={handleBack} onCreateMissedSet={handleCreateMissedSet} />
-  if (game === 'type') return <TypeGame set={set} onBack={handleBack} onCreateMissedSet={handleCreateMissedSet} />
+  if (game === 'type') return <TypeGame set={set} onBack={handleBack} onCreateMissedSet={handleCreateMissedSet} startSide={startSide} />
   if (game === 'bubble-pop') return <BubblePopGame set={set} onBack={handleBack} onCreateMissedSet={handleCreateMissedSet} startSide={startSide} />
   if (game === 'applications') return <ApplicationsMode set={set} onBack={handleBack} onCreateMissedSet={handleCreateMissedSet} />
 

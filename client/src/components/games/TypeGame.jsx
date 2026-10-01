@@ -3,8 +3,9 @@ import { ArrowLeft, Trophy, CheckCircle2, XCircle, Layers, RefreshCw } from 'luc
 import { shuffleArray } from '../../utils/shuffleArray.js'
 import { launchConfetti } from '../../utils/confetti.js'
 import { useGameResults } from '../../hooks/useGameResults.js'
+import { normalizeAnswer } from '../../utils/normalizeAnswer.js'
 
-export default function TypeGame({ set, onBack, onCreateMissedSet }) {
+export default function TypeGame({ set, onBack, onCreateMissedSet, startSide = 'definition' }) {
   const [questions, setQuestions] = useState([])
   const [index, setIndex] = useState(0)
   const [input, setInput] = useState('')
@@ -66,11 +67,18 @@ export default function TypeGame({ set, onBack, onCreateMissedSet }) {
   }
 
   const q = questions[index]
+  const showTerm = startSide === 'term'
+  const prompt = showTerm ? q.term : q.definition
+  const answer = showTerm ? q.definition : q.term
+  // Terms must match exactly (case-insensitive); typed definitions are long, so compare leniently
+  const isCorrect = showTerm
+    ? normalizeAnswer(input) === normalizeAnswer(answer)
+    : input.trim().toLowerCase() === answer.trim().toLowerCase()
 
   const submit = (e) => {
     e.preventDefault()
     if (status !== 'typing' || !input.trim()) return
-    if (input.trim().toLowerCase() === q.term.trim().toLowerCase()) {
+    if (isCorrect) {
       setStatus('correct')
       setScore(s => s + 1)
       setTimeout(() => { setIndex(i => i + 1); setInput(''); setStatus('typing') }, 1000)
@@ -91,15 +99,15 @@ export default function TypeGame({ set, onBack, onCreateMissedSet }) {
       </div>
 
       <div className="bg-white rounded-3xl p-8 sm:p-12 shadow-sm border border-slate-100 mb-8 flex flex-col items-center justify-center min-h-[200px] select-none">
-        <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-4">Definition</p>
-        <h2 className="text-2xl sm:text-3xl font-bold text-slate-800 text-center break-words">{q.definition}</h2>
+        <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-4">{showTerm ? 'Term' : 'Definition'}</p>
+        <h2 className="text-2xl sm:text-3xl font-bold text-slate-800 text-center break-words">{prompt}</h2>
       </div>
 
       <form onSubmit={submit} className="space-y-4">
         <div className="relative">
           <input
             type="text" value={input} onChange={e => setInput(e.target.value)} disabled={status !== 'typing'}
-            placeholder="Type the exact term..." autoFocus autoCapitalize="none" autoCorrect="off" spellCheck="false" autoComplete="off"
+            placeholder={showTerm ? 'Type the definition...' : 'Type the exact term...'} autoFocus autoCapitalize="none" autoCorrect="off" spellCheck="false" autoComplete="off"
             className={`w-full text-[16px] sm:text-xl p-5 sm:p-6 rounded-2xl border-2 outline-none transition-all ${
               status === 'typing'    ? 'bg-white border-slate-200 focus:border-crimson-500 focus:ring-4 focus:ring-crimson-500/10 text-slate-800'
             : status === 'correct'  ? 'bg-emerald-50 border-emerald-500 text-emerald-800'
@@ -118,7 +126,7 @@ export default function TypeGame({ set, onBack, onCreateMissedSet }) {
       {status === 'incorrect' && (
         <div className="mt-6 p-6 bg-white rounded-2xl border border-red-100 shadow-sm animate-in slide-in-from-bottom-4">
           <p className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-2">Correct Answer</p>
-          <p className="text-2xl font-bold text-emerald-600 mb-6">{q.term}</p>
+          <p className={`${showTerm ? 'text-xl' : 'text-2xl'} font-bold text-emerald-600 mb-6 break-words`}>{answer}</p>
           <button onClick={advance} className="w-full py-5 bg-red-100 hover:bg-red-200 text-red-700 font-bold text-lg rounded-xl transition-colors touch-manipulation">
             Continue →
           </button>
