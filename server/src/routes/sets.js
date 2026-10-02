@@ -1,26 +1,16 @@
 import { Router } from 'express'
 import prisma from '../db.js'
 import { requireAuth } from '../middleware/requireAuth.js'
+import { accessibleSetWhere } from '../lib/setAccess.js'
+import { termKey } from '../lib/termKey.js'
 
 const router = Router()
 
 // GET /api/sets — return own sets + sets shared with user's classes
 router.get('/', requireAuth, async (req, res, next) => {
   try {
-    const userId = req.user.id
-
-    // Classes the user belongs to (as student)
-    const memberships = await prisma.classMember.findMany({ where: { studentId: userId } })
-    const classIds = memberships.map(m => m.classId)
-
     const sets = await prisma.wordSet.findMany({
-      where: {
-        OR: [
-          { ownerId: userId },
-          { shares: { some: { classId: { in: classIds } } } },
-          { isPublic: true },
-        ],
-      },
+      where: await accessibleSetWhere(req.user.id),
       include: {
         cards: { orderBy: { position: 'asc' } },
         owner: { select: { id: true, displayName: true, role: true } },
@@ -92,7 +82,7 @@ router.put('/:id', requireAuth, async (req, res, next) => {
     const existingCards = await prisma.card.findMany({ where: { setId: set.id } })
     const aiByTerm = {}
     for (const c of existingCards) {
-      aiByTerm[c.term.trim().toLowerCase()] = {
+      aiByTerm[termKey(c.term)] = {
         hint: c.hint,
         imageUrl: c.imageUrl,
         exampleSentence: c.exampleSentence,
@@ -111,7 +101,7 @@ router.put('/:id', requireAuth, async (req, res, next) => {
         isSpanish: isSpanish ?? set.isSpanish,
         cards: {
           create: cards.map((c, i) => {
-            const ai = aiByTerm[c.term.trim().toLowerCase()] ?? {}
+            const ai = aiByTerm[termKey(c.term)] ?? {}
             return {
               term: c.term.trim(),
               definition: c.definition.trim(),

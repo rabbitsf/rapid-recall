@@ -5,7 +5,7 @@ import { launchConfetti } from '../../utils/confetti.js'
 import { useGameResults } from '../../hooks/useGameResults.js'
 import { normalizeAnswer } from '../../utils/normalizeAnswer.js'
 
-export default function TypeGame({ set, onBack, onCreateMissedSet, startSide = 'definition' }) {
+export default function TypeGame({ set, onBack, onAnswer, onCreateMissedSet, startSide = 'definition' }) {
   const [questions, setQuestions] = useState([])
   const [index, setIndex] = useState(0)
   const [input, setInput] = useState('')
@@ -78,6 +78,7 @@ export default function TypeGame({ set, onBack, onCreateMissedSet, startSide = '
   const submit = (e) => {
     e.preventDefault()
     if (status !== 'typing' || !input.trim()) return
+    onAnswer?.(q.term, isCorrect)
     if (isCorrect) {
       setStatus('correct')
       setScore(s => s + 1)

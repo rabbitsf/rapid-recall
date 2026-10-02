@@ -4,7 +4,7 @@ import { shuffleArray } from '../../utils/shuffleArray.js'
 import { launchConfetti } from '../../utils/confetti.js'
 import { useGameResults } from '../../hooks/useGameResults.js'
 
-export default function MatchGame({ set, onBack, onCreateMissedSet }) {
+export default function MatchGame({ set, onBack, onAnswer, onCreateMissedSet }) {
   const [tiles, setTiles] = useState([])
   const [selected, setSelected] = useState([])
   const [matched, setMatched] = useState([])
@@ -34,6 +34,9 @@ export default function MatchGame({ set, onBack, onCreateMissedSet }) {
     if (selected.length !== 2) return
     const [t1, t2] = selected.map(id => tiles.find(t => t.id === id))
     if (t1.pairId === t2.pairId && t1.type !== t2.type) {
+      // A pair counts as correct only if neither of its tiles was part of a wrong guess this round
+      const card = set.cards.find(c => c.id === t1.pairId)
+      onAnswer?.(card.term, !missed.some(c => c.id === card.id))
       const newMatched = [...matched, t1.id, t2.id]
       setMatched(newMatched)
       setSelected([])

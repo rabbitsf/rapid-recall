@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
-import { ArrowLeft, BookOpen, Zap, CheckCircle2, Keyboard, Timer, Layers, PenLine } from 'lucide-react'
+import { ArrowLeft, BookOpen, Zap, CheckCircle2, Keyboard, Timer, Layers, PenLine, RotateCcw } from 'lucide-react'
 import { useStudyLogs } from '../hooks/useStudyLogs.js'
+import { useCardProgress, classifyCards } from '../hooks/useCardProgress.js'
 import FlashcardsMode from './games/FlashcardsMode.jsx'
-import StartSideModal from './StartSideModal.jsx'
+import StudyOptionsModal from './StudyOptionsModal.jsx'
 import MatchGame from './games/MatchGame.jsx'
 import QuizGame from './games/QuizGame.jsx'
 import TypeGame from './games/TypeGame.jsx'
@@ -28,9 +29,13 @@ function today() {
 export default function StudyMenu({ set, onBack, onCreateMissedSet }) {
   const [game, setGame] = useState(null)
   const [startSide, setStartSide] = useState('term')
-  const [pendingGame, setPendingGame] = useState(null) // game id awaiting a start-side choice
+  const [pendingGame, setPendingGame] = useState(null) // game id awaiting the study-options choice
+  const [studySet, setStudySet] = useState(set) // set passed to the game; cards filtered when skipping mastered
   const startRef = useRef(null)
   const { updateLog, logs } = useStudyLogs()
+  const { progress, loaded, recordAnswer, flush, resetProgress } = useCardProgress(set.id)
+  const groups = classifyCards(set.cards, progress)
+  const remainingCards = set.cards.filter(c => !groups.mastered.includes(c))
 
   // Start timer when a game launches
   useEffect(() => {
@@ -46,19 +51,33 @@ export default function StudyMenu({ set, onBack, onCreateMissedSet }) {
     }
   }, [game])
 
-  const handleBack = () => { setGame(null) }
+  const handleBack = () => { flush(); setGame(null) }
+
+  const launch = (gameId, { side, scope }) => {
+    if (side) setStartSide(side)
+    setStudySet(scope === 'remaining' ? { ...set, cards: remainingCards } : set)
+    setGame(gameId)
+  }
+
+  const handleReset = async () => {
+    if (!window.confirm('Reset your progress for this set? All terms will go back to Not studied.')) return
+    await resetProgress()
+  }
 
   const handleCreateMissedSet = (missed) => {
+    flush()
     onCreateMissedSet(missed)
     setGame(null)
   }
 
-  if (game === 'flashcards') return <FlashcardsMode set={set} onBack={handleBack} startSide={startSide} />
-  if (game === 'match') return <MatchGame set={set} onBack={handleBack} onCreateMissedSet={handleCreateMissedSet} />
-  if (game === 'quiz') return <QuizGame set={set} onBack={handleBack} onCreateMissedSet={handleCreateMissedSet} />
-  if (game === 'type') return <TypeGame set={set} onBack={handleBack} onCreateMissedSet={handleCreateMissedSet} startSide={startSide} />
-  if (game === 'bubble-pop') return <BubblePopGame set={set} onBack={handleBack} onCreateMissedSet={handleCreateMissedSet} startSide={startSide} />
-  if (game === 'applications') return <ApplicationsMode set={set} onBack={handleBack} onCreateMissedSet={handleCreateMissedSet} />
+  // Games get the (possibly filtered) studySet plus the full card list for distractors / term banks
+  const gameProps = { set: studySet, allCards: set.cards, onBack: handleBack, onAnswer: recordAnswer }
+  if (game === 'flashcards') return <FlashcardsMode {...gameProps} startSide={startSide} />
+  if (game === 'match') return <MatchGame {...gameProps} onCreateMissedSet={handleCreateMissedSet} />
+  if (game === 'quiz') return <QuizGame {...gameProps} onCreateMissedSet={handleCreateMissedSet} />
+  if (game === 'type') return <TypeGame {...gameProps} onCreateMissedSet={handleCreateMissedSet} startSide={startSide} />
+  if (game === 'bubble-pop') return <BubblePopGame {...gameProps} onCreateMissedSet={handleCreateMissedSet} startSide={startSide} />
+  if (game === 'applications') return <ApplicationsMode {...gameProps} onCreateMissedSet={handleCreateMissedSet} />
 
   return (
     <div className="max-w-5xl mx-auto animate-in fade-in slide-in-from-bottom-8 duration-500">
@@ -74,8 +93,8 @@ export default function StudyMenu({ set, onBack, onCreateMissedSet }) {
         {GAMES.map(g => {
           const Icon = g.icon
           const handlePlay = () => {
-            if (START_SIDE_GAMES.includes(g.id)) setPendingGame(g.id)
-            else setGame(g.id)
+            if (START_SIDE_GAMES.includes(g.id) || groups.mastered.length > 0) setPendingGame(g.id)
+            else launch(g.id, { side: null, scope: 'all' })
           }
           return (
             <div key={g.id} onClick={handlePlay} className={`bg-white rounded-3xl p-6 border-2 border-transparent hover:border-${g.color}-500 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer group text-center flex flex-col items-center touch-manipulation select-none`}>
@@ -88,16 +107,59 @@ export default function StudyMenu({ set, onBack, onCreateMissedSet }) {
         })}
       </div>
 
+      {loaded && <TermsInSet groups={groups} total={set.cards.length} onReset={handleReset} />}
+
       {pendingGame && (
-        <StartSideModal
+        <StudyOptionsModal
+          showStartSide={START_SIDE_GAMES.includes(pendingGame)}
+          totalCount={set.cards.length}
+          remainingCount={remainingCards.length}
           onClose={() => setPendingGame(null)}
-          onChoose={(side) => {
-            setStartSide(side)
-            setGame(pendingGame)
+          onReset={handleReset}
+          onChoose={(choice) => {
+            launch(pendingGame, choice)
             setPendingGame(null)
           }}
         />
       )}
+    </div>
+  )
+}
+
+const TERM_GROUPS = [
+  { key: 'learning', title: 'Still learning', color: 'text-orange-500', blurb: "You've started learning these terms. Keep it up!" },
+  { key: 'notStudied', title: 'Not studied', color: 'text-blue-600', blurb: "You haven't studied these terms yet!" },
+  { key: 'mastered', title: 'Mastered', color: 'text-emerald-600', blurb: "You've answered these correctly twice in a row." },
+]
+
+function TermsInSet({ groups, total, onReset }) {
+  const hasProgress = groups.learning.length + groups.mastered.length > 0
+  return (
+    <div className="mt-10">
+      <div className="flex items-center justify-between mb-4 px-2">
+        <h3 className="text-xl font-bold text-slate-800">Terms in this set ({total})</h3>
+        {hasProgress && (
+          <button onClick={onReset} className="flex items-center gap-1.5 text-sm font-semibold text-slate-500 hover:text-crimson-600 px-3 py-2 rounded-full touch-manipulation">
+            <RotateCcw size={14} /> Reset progress
+          </button>
+        )}
+      </div>
+      <div className="bg-slate-100 rounded-3xl p-4 sm:p-6 space-y-8">
+        {TERM_GROUPS.filter(g => groups[g.key].length > 0).map(g => (
+          <section key={g.key}>
+            <h4 className={`text-lg font-bold ${g.color}`}>{g.title} ({groups[g.key].length})</h4>
+            <p className="text-sm text-slate-600 mb-3">{g.blurb}</p>
+            <div className="space-y-2">
+              {groups[g.key].map(card => (
+                <div key={card.id} className="bg-white rounded-2xl shadow-sm px-5 py-4 grid grid-cols-1 sm:grid-cols-2 gap-1 sm:gap-6">
+                  <p className="text-slate-800 font-medium break-words">{card.term}</p>
+                  <p className="text-slate-600 break-words sm:border-l sm:border-slate-200 sm:pl-6">{card.definition}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+        ))}
+      </div>
     </div>
   )
 }

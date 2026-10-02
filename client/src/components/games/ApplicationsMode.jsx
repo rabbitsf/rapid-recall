@@ -4,7 +4,7 @@ import { shuffleArray } from '../../utils/shuffleArray.js'
 import { launchConfetti } from '../../utils/confetti.js'
 import { useGameResults } from '../../hooks/useGameResults.js'
 
-export default function ApplicationsMode({ set, onBack, onCreateMissedSet }) {
+export default function ApplicationsMode({ set, allCards = set.cards, onBack, onAnswer, onCreateMissedSet }) {
   const [sentences, setSentences] = useState(() => {
     const s = {}
     for (const c of set.cards) {
@@ -33,7 +33,8 @@ export default function ApplicationsMode({ set, onBack, onCreateMissedSet }) {
     setMissed([])
     setSelectedTerm(null)
     setStatus('answering')
-    setTermBank(shuffleArray(set.cards.map(c => c.term)))
+    // Term bank uses the whole set so a short "still learning" round isn't a giveaway
+    setTermBank(shuffleArray(allCards.map(c => c.term)))
   }
 
   useEffect(() => { init() }, [])
@@ -73,13 +74,19 @@ export default function ApplicationsMode({ set, onBack, onCreateMissedSet }) {
     const correct = questions[index].term
     setSelectedTerm(term)
 
+    const alreadyMissed = missed.some(c => c.id === questions[index].id)
     if (term.trim().toLowerCase() === correct.trim().toLowerCase()) {
+      // Only a first-try answer counts toward mastery; the miss was already recorded otherwise
+      if (!alreadyMissed) onAnswer?.(correct, true)
       setStatus('correct')
       setScore(s => s + 1)
       setTimeout(() => { setIndex(i => i + 1); setSelectedTerm(null); setStatus('answering') }, 800)
     } else {
       setStatus('incorrect')
-      if (!missed.some(c => c.id === questions[index].id)) setMissed(m => [...m, questions[index]])
+      if (!alreadyMissed) {
+        onAnswer?.(correct, false)
+        setMissed(m => [...m, questions[index]])
+      }
       setTimeout(() => { setSelectedTerm(null); setStatus('answering') }, 500)
     }
   }

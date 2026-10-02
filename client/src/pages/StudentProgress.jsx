@@ -86,19 +86,54 @@ export default function StudentProgress() {
               </button>
             </div>
 
-            {expanded === student.id && student.recentResults.length > 0 && (
-              <div className="px-6 py-4 bg-slate-50 border-b border-slate-200">
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Recent Games</p>
-                <div className="space-y-2">
-                  {student.recentResults.map(r => (
-                    <div key={r.id} className="flex items-center justify-between text-sm">
-                      <span className="text-slate-600">{r.set?.title ?? 'Unknown set'} — <span className="capitalize">{r.game}</span></span>
-                      <span className="font-semibold text-slate-800">{r.score}/{r.total} <span className="text-slate-400 font-normal">({Math.round(r.score/r.total*100)}%)</span></span>
+            {expanded === student.id && (student.recentResults.length > 0 || student.setMastery.length > 0) && (
+              <div className="px-6 py-4 bg-slate-50 border-b border-slate-200 space-y-5">
+                {student.setMastery.length > 0 && <SetMastery sets={student.setMastery} />}
+                {student.recentResults.length > 0 && (
+                  <div>
+                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Recent Games</p>
+                    <div className="space-y-2">
+                      {student.recentResults.map(r => (
+                        <div key={r.id} className="flex items-center justify-between text-sm">
+                          <span className="text-slate-600">{r.set?.title ?? 'Unknown set'} — <span className="capitalize">{r.game}</span></span>
+                          <span className="font-semibold text-slate-800">{r.score}/{r.total} <span className="text-slate-400 font-normal">({Math.round(r.score/r.total*100)}%)</span></span>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
+                  </div>
+                )}
               </div>
             )}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// Per shared set: stacked bar of mastered / still learning / not studied terms
+function SetMastery({ sets }) {
+  return (
+    <div>
+      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Card Mastery</p>
+      <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500 mb-3">
+        <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-emerald-500" />Mastered</span>
+        <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-orange-400" />Still learning</span>
+        <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-slate-200" />Not studied</span>
+      </div>
+      <div className="space-y-3">
+        {sets.map(s => (
+          <div key={s.setId}>
+            <div className="flex items-center justify-between text-sm mb-1 gap-3">
+              <span className="text-slate-600 truncate">{s.title}</span>
+              <span className="text-slate-500 shrink-0">
+                <span className="font-semibold text-emerald-700">{s.mastered}</span> / <span className="font-semibold text-orange-600">{s.learning}</span> / {s.notStudied}
+              </span>
+            </div>
+            <div className="flex h-2 rounded-full overflow-hidden bg-slate-200" title={`${s.mastered} mastered, ${s.learning} still learning, ${s.notStudied} not studied`}>
+              <div className="bg-emerald-500" style={{ width: `${s.total ? (s.mastered / s.total) * 100 : 0}%` }} />
+              <div className="bg-orange-400" style={{ width: `${s.total ? (s.learning / s.total) * 100 : 0}%` }} />
+            </div>
           </div>
         ))}
       </div>

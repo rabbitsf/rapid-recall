@@ -32,6 +32,7 @@ model User {
   gameResults       GameResult[]
   googleToken       GoogleToken?
   classroomStudents ClassroomStudentMapping[]
+  cardProgress      CardProgress[]
 
   @@map("users")
 }
@@ -114,6 +115,7 @@ model WordSet {
   results    GameResult[]
   copiedFrom WordSet?        @relation("SetCopy", fields: [copiedFromSetId], references: [id], onDelete: SetNull)
   copies     WordSet[]       @relation("SetCopy")
+  progress   CardProgress[]
 
   @@map("word_sets")
 }
@@ -172,4 +174,25 @@ model GameResult {
   set  WordSet @relation(fields: [setId], references: [id])
 
   @@map("game_results")
+}
+
+// Per-student, per-term study progress. Keyed by termKey (trimmed lowercase term),
+// not cardId, because PUT /api/sets/:id recreates every card on save.
+// Mastered = streak >= 2; a row with streak < 2 = still learning; no row = not studied.
+model CardProgress {
+  id             String   @id @default(uuid())
+  userId         String   @map("user_id")
+  setId          String   @map("set_id")
+  termKey        String   @map("term_key")
+  streak         Int      @default(0)
+  correctCount   Int      @default(0) @map("correct_count")
+  incorrectCount Int      @default(0) @map("incorrect_count")
+  lastStudiedAt  DateTime @default(now()) @map("last_studied_at")
+
+  user User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  set  WordSet @relation(fields: [setId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, setId, termKey])
+  @@index([setId])
+  @@map("card_progress")
 }

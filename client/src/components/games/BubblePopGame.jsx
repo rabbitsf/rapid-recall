@@ -7,7 +7,7 @@ import { normalizeAnswer } from '../../utils/normalizeAnswer.js'
 
 const TIME_LIMIT = 10
 
-export default function BubblePopGame({ set, onBack, onCreateMissedSet, startSide = 'definition' }) {
+export default function BubblePopGame({ set, onBack, onAnswer, onCreateMissedSet, startSide = 'definition' }) {
   const [questions, setQuestions] = useState([])
   const [index, setIndex] = useState(0)
   const [input, setInput] = useState('')
@@ -25,6 +25,7 @@ export default function BubblePopGame({ set, onBack, onCreateMissedSet, startSid
     if (status !== 'playing' || !questions.length) return
     if (timeLeft <= 0) {
       setStatus('popped')
+      onAnswer?.(questions[index].term, false)
       setMissed(prev => { const c = questions[index]; return prev.find(x => x.id === c.id) ? prev : [...prev, c] })
       return
     }
@@ -88,6 +89,7 @@ export default function BubblePopGame({ set, onBack, onCreateMissedSet, startSid
     setInput(e.target.value)
     if (normalizeAnswer(e.target.value) === normalizeAnswer(answer)) {
       setStatus('correct'); setScore(s => s + 1)
+      onAnswer?.(q.term, true)
       setTimeout(advance, 800)
     }
   }

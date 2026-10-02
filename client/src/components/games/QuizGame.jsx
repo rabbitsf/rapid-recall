@@ -4,7 +4,7 @@ import { shuffleArray } from '../../utils/shuffleArray.js'
 import { launchConfetti } from '../../utils/confetti.js'
 import { useGameResults } from '../../hooks/useGameResults.js'
 
-export default function QuizGame({ set, onBack, onCreateMissedSet }) {
+export default function QuizGame({ set, allCards = set.cards, onBack, onAnswer, onCreateMissedSet }) {
   const [questions, setQuestions] = useState([])
   const [index, setIndex] = useState(0)
   const [score, setScore] = useState(0)
@@ -17,7 +17,8 @@ export default function QuizGame({ set, onBack, onCreateMissedSet }) {
 
   const init = () => {
     const qs = shuffleArray([...set.cards]).map(card => {
-      const others = shuffleArray(set.cards.filter(c => c.id !== card.id)).slice(0, 3)
+      // Distractors come from the whole set so a short "still learning" round still has 3 wrong options
+      const others = shuffleArray(allCards.filter(c => c.id !== card.id)).slice(0, 3)
       return {
         term: card.term,
         originalCard: card,
@@ -37,6 +38,7 @@ export default function QuizGame({ set, onBack, onCreateMissedSet }) {
     setChecked(true)
     const q = questions[index]
     const correct = q.options.find(o => o.id === selectedId)?.correct
+    onAnswer?.(q.term, correct)
     const newScore = correct ? score + 1 : score
     if (correct) setScore(newScore)
     else if (!missed.some(c => c.id === q.originalCard.id)) setMissed(p => [...p, q.originalCard])

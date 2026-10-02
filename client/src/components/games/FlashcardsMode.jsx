@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
-import { ArrowLeft, Volume2, Lightbulb, Image } from 'lucide-react'
+import { ArrowLeft, Volume2, Lightbulb, Image, Check, RotateCcw } from 'lucide-react'
 import { playAudioUrl } from '../../utils/audio.js'
 
-export default function FlashcardsMode({ set, onBack, startSide = 'term' }) {
+export default function FlashcardsMode({ set, onBack, onAnswer, startSide = 'term' }) {
   const [index, setIndex] = useState(0)
   const [flipped, setFlipped] = useState(startSide === 'definition')
   const [shownHint, setShownHint] = useState(false)
@@ -34,6 +34,12 @@ export default function FlashcardsMode({ set, onBack, startSide = 'term' }) {
     setShownHint(false)
     setHintError(false)
     setTimeout(() => setIndex(i => (i + dir + cards.length) % cards.length), 150)
+  }
+
+  // Self-rating counts toward mastery like a game answer, then moves on
+  const rate = (knewIt) => {
+    onAnswer?.(cards[index].term, knewIt)
+    go(1)
   }
 
   const card = cards[index]
@@ -213,11 +219,17 @@ export default function FlashcardsMode({ set, onBack, startSide = 'term' }) {
       </div>
 
       {/* Navigation */}
-      <div className="flex items-center gap-8 mt-12">
-        <button onClick={() => go(-1)} className="w-16 h-16 flex items-center justify-center bg-white rounded-full shadow-md text-slate-600 hover:text-crimson-600 active:scale-95 transition-all touch-manipulation">
+      <div className="flex items-center gap-3 sm:gap-6 mt-12">
+        <button onClick={() => go(-1)} title="Previous card" className="w-14 h-14 sm:w-16 sm:h-16 shrink-0 flex items-center justify-center bg-white rounded-full shadow-md text-slate-600 hover:text-crimson-600 active:scale-95 transition-all touch-manipulation">
           <ArrowLeft size={28} />
         </button>
-        <button onClick={() => go(1)} className="w-16 h-16 flex items-center justify-center bg-white rounded-full shadow-md text-slate-600 hover:text-crimson-600 active:scale-95 transition-all touch-manipulation">
+        <button onClick={() => rate(false)} className="flex items-center gap-2 px-3 sm:px-6 h-14 sm:h-16 bg-white rounded-full shadow-md text-sm sm:text-base font-semibold whitespace-nowrap text-orange-600 border-2 border-orange-200 hover:bg-orange-50 active:scale-95 transition-all touch-manipulation">
+          <RotateCcw size={20} className="hidden sm:block" /> Still learning
+        </button>
+        <button onClick={() => rate(true)} className="flex items-center gap-2 px-3 sm:px-6 h-14 sm:h-16 bg-white rounded-full shadow-md text-sm sm:text-base font-semibold whitespace-nowrap text-emerald-600 border-2 border-emerald-200 hover:bg-emerald-50 active:scale-95 transition-all touch-manipulation">
+          <Check size={20} className="hidden sm:block" /> Got it
+        </button>
+        <button onClick={() => go(1)} title="Next card" className="w-14 h-14 sm:w-16 sm:h-16 shrink-0 flex items-center justify-center bg-white rounded-full shadow-md text-slate-600 hover:text-crimson-600 active:scale-95 transition-all touch-manipulation">
           <ArrowLeft size={28} className="rotate-180" />
         </button>
       </div>

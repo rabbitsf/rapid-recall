@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import prisma from '../db.js'
 import { requireAuth } from '../middleware/requireAuth.js'
+import { findAccessibleSet } from '../lib/setAccess.js'
 
 const router = Router()
 
@@ -12,20 +13,8 @@ router.post('/', requireAuth, async (req, res, next) => {
       return res.status(400).json({ error: 'Missing required fields' })
     }
 
-    // Verify the user has access to this set (owns it, it's shared with their class, or public)
     const userId = req.user.id
-    const memberships = await prisma.classMember.findMany({ where: { studentId: userId }, select: { classId: true } })
-    const classIds = memberships.map(m => m.classId)
-    const set = await prisma.wordSet.findFirst({
-      where: {
-        id: setId,
-        OR: [
-          { ownerId: userId },
-          { isPublic: true },
-          { shares: { some: { classId: { in: classIds } } } },
-        ],
-      },
-    })
+    const set = await findAccessibleSet(userId, setId)
     if (!set) return res.status(403).json({ error: 'Forbidden' })
 
     const result = await prisma.gameResult.create({

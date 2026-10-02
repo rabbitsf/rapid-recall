@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import prisma from '../db.js'
 import { requireTeacher } from '../middleware/requireAuth.js'
+import { countMastery } from '../lib/mastery.js'
 
 const router = Router()
 
@@ -16,12 +17,22 @@ router.get('/class/:classId', requireTeacher, async (req, res, next) => {
 
     const studentIds = cls.members.map(m => m.studentId)
 
-    const [logs, results] = await Promise.all([
+    const shares = await prisma.setClassShare.findMany({
+      where: { classId: cls.id },
+      include: { set: { select: { id: true, title: true, cards: { select: { term: true } } } } },
+    })
+    const sharedSets = shares.map(s => s.set)
+
+    const [logs, results, progressRows] = await Promise.all([
       prisma.studyLog.findMany({ where: { userId: { in: studentIds } } }),
       prisma.gameResult.findMany({
         where: { userId: { in: studentIds } },
         include: { set: { select: { title: true } } },
         orderBy: { completedAt: 'desc' },
+      }),
+      prisma.cardProgress.findMany({
+        where: { userId: { in: studentIds }, setId: { in: sharedSets.map(s => s.id) } },
+        select: { userId: true, setId: true, termKey: true, streak: true },
       }),
     ])
 
@@ -38,6 +49,16 @@ router.get('/class/:classId', requireTeacher, async (req, res, next) => {
         studentMap[r.userId].gameCount += 1
         if (studentMap[r.userId].recentResults.length < 5) studentMap[r.userId].recentResults.push(r)
       }
+    }
+
+    // Per student × shared set: mastered / learning / notStudied counts against the set's current terms
+    const rowsByStudentSet = {}
+    for (const r of progressRows) (rowsByStudentSet[`${r.userId}:${r.setId}`] ??= []).push(r)
+    for (const student of Object.values(studentMap)) {
+      student.setMastery = sharedSets.map(set => {
+        const counts = countMastery(set.cards, rowsByStudentSet[`${student.id}:${set.id}`] ?? [])
+        return { setId: set.id, title: set.title, ...counts, total: counts.mastered + counts.learning + counts.notStudied }
+      })
     }
 
     res.json({ class: { id: cls.id, name: cls.name }, students: Object.values(studentMap) })
