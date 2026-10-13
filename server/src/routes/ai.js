@@ -2,6 +2,7 @@ import { Router } from 'express'
 import OpenAI from 'openai'
 import prisma from '../db.js'
 import { requireAuth } from '../middleware/requireAuth.js'
+import { findAccessibleSet } from '../lib/setAccess.js'
 
 const router = Router()
 
@@ -37,11 +38,20 @@ function sentencePrompt(term, definition, isSpanish) {
   )
 }
 
+// Loads the card if the user may study its set (same rule as studying). Sends 404 and returns null otherwise,
+// so these paid API calls can't be triggered for cards the user can't see.
+async function loadStudyableCard(req, res) {
+  const card = await prisma.card.findUnique({ where: { id: req.params.cardId } })
+  const set = card && await findAccessibleSet(req.user.id, card.setId)
+  if (!set) { res.status(404).json({ error: 'Card not found' }); return null }
+  return { card, set }
+}
+
 // POST /api/ai/cards/:cardId/hint
 router.post('/cards/:cardId/hint', requireAuth, async (req, res, next) => {
   try {
-    const card = await prisma.card.findUnique({ where: { id: req.params.cardId } })
-    if (!card) return res.status(404).json({ error: 'Card not found' })
+    const { card } = await loadStudyableCard(req, res) ?? {}
+    if (!card) return
     if (card.hint) return res.json({ hint: card.hint })
 
     const hint = await callAI(
@@ -61,8 +71,8 @@ router.post('/cards/:cardId/hint', requireAuth, async (req, res, next) => {
 // imageUrl: null = not yet fetched; '' = fetched but none found; 'https://...' = has image.
 router.post('/cards/:cardId/image', requireAuth, async (req, res, next) => {
   try {
-    const card = await prisma.card.findUnique({ where: { id: req.params.cardId } })
-    if (!card) return res.status(404).json({ error: 'Card not found' })
+    const { card } = await loadStudyableCard(req, res) ?? {}
+    if (!card) return
     if (card.imageUrl !== null) return res.json({ imageUrl: card.imageUrl })
 
     const query = encodeURIComponent(card.term)
@@ -83,14 +93,11 @@ router.post('/cards/:cardId/image', requireAuth, async (req, res, next) => {
 // Generates (and caches) one fill-in-the-blank sentence for a single card.
 router.post('/cards/:cardId/sentence', requireAuth, async (req, res, next) => {
   try {
-    const card = await prisma.card.findUnique({
-      where: { id: req.params.cardId },
-      include: { set: { select: { isSpanish: true } } },
-    })
-    if (!card) return res.status(404).json({ error: 'Card not found' })
+    const { card, set } = await loadStudyableCard(req, res) ?? {}
+    if (!card) return
     if (card.exampleSentence) return res.json({ exampleSentence: card.exampleSentence })
 
-    const exampleSentence = await callAI(sentencePrompt(card.term, card.definition, card.set.isSpanish))
+    const exampleSentence = await callAI(sentencePrompt(card.term, card.definition, set.isSpanish))
     await prisma.card.update({ where: { id: card.id }, data: { exampleSentence } })
     res.json({ exampleSentence })
   } catch (err) {
@@ -101,21 +108,21 @@ router.post('/cards/:cardId/sentence', requireAuth, async (req, res, next) => {
 
 // POST /api/ai/sets/:setId/sentences
 // Batch-generates sentences for all cards missing one. Continues on per-card failures.
+// Owner only — up to 500 paid calls per request.
 router.post('/sets/:setId/sentences', requireAuth, async (req, res, next) => {
   try {
-    const [set, allCards] = await Promise.all([
-      prisma.wordSet.findUnique({ where: { id: req.params.setId }, select: { isSpanish: true } }),
-      prisma.card.findMany({
-        where: { setId: req.params.setId },
-        select: { id: true, term: true, definition: true, exampleSentence: true },
-      }),
-    ])
+    const set = await prisma.wordSet.findUnique({ where: { id: req.params.setId }, select: { ownerId: true, isSpanish: true } })
+    if (!set || set.ownerId !== req.user.id) return res.status(404).json({ error: 'Set not found or empty' })
+    const allCards = await prisma.card.findMany({
+      where: { setId: req.params.setId },
+      select: { id: true, term: true, definition: true, exampleSentence: true },
+    })
     if (!allCards.length) return res.status(404).json({ error: 'Set not found or empty' })
 
     const missing = allCards.filter(c => !c.exampleSentence)
     for (const card of missing) {
       try {
-        const exampleSentence = await callAI(sentencePrompt(card.term, card.definition, set?.isSpanish))
+        const exampleSentence = await callAI(sentencePrompt(card.term, card.definition, set.isSpanish))
         await prisma.card.update({ where: { id: card.id }, data: { exampleSentence } })
         card.exampleSentence = exampleSentence
       } catch (err) {
