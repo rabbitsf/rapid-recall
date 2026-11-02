@@ -15,6 +15,7 @@ router.get('/', requireAuth, async (req, res, next) => {
         cards: { orderBy: { position: 'asc' } },
         owner: { select: { id: true, displayName: true, role: true } },
         shares: { include: { class: { select: { id: true, name: true } } } },
+        studentShares: { select: { classId: true, student: { select: { id: true, displayName: true } } } },
         copiedFrom: { select: { id: true, title: true, owner: { select: { displayName: true } } } },
       },
       orderBy: { createdAt: 'desc' },

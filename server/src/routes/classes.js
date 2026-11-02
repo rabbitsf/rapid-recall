@@ -171,41 +171,110 @@ router.delete('/:id/members/:studentId', requireTeacher, async (req, res, next) 
     const cls = await prisma.class.findUnique({ where: { id: req.params.id } })
     if (!cls || cls.teacherId !== req.user.id) return res.status(403).json({ error: 'Forbidden' })
 
-    await prisma.classMember.deleteMany({
-      where: { classId: cls.id, studentId: req.params.studentId },
-    })
+    // Shares made through this class leave with the student — sets they shared, and sets shared with them
+    const studentId = req.params.studentId
+    await prisma.$transaction([
+      prisma.classMember.deleteMany({ where: { classId: cls.id, studentId } }),
+      prisma.setClassShare.deleteMany({ where: { classId: cls.id, set: { ownerId: studentId } } }),
+      prisma.setStudentShare.deleteMany({ where: { classId: cls.id, OR: [{ studentId }, { set: { ownerId: studentId } }] } }),
+    ])
     res.json({ ok: true })
   } catch (err) { next(err) }
 })
 
-// POST /api/classes/:id/shares — teacher shares a set with this class
-router.post('/:id/shares', requireTeacher, async (req, res, next) => {
+// A class's teacher, or a student who is a member, may share their own sets into it
+async function canShareInClass(user, cls) {
+  if (cls.teacherId === user.id) return true
+  if (user.role !== 'student') return false
+  const member = await prisma.classMember.findUnique({
+    where: { classId_studentId: { classId: cls.id, studentId: user.id } },
+  })
+  return !!member
+}
+
+// GET /api/classes/:id/classmates — a member lists the other students in their class (for picking who to share with)
+router.get('/:id/classmates', requireAuth, async (req, res, next) => {
   try {
     const cls = await prisma.class.findUnique({ where: { id: req.params.id } })
-    if (!cls || cls.teacherId !== req.user.id) return res.status(403).json({ error: 'Forbidden' })
+    if (!cls || !(await canShareInClass(req.user, cls))) return res.status(403).json({ error: 'Forbidden' })
+
+    const members = await prisma.classMember.findMany({
+      where: { classId: cls.id, studentId: { not: req.user.id } },
+      include: { student: { select: { id: true, displayName: true, photoUrl: true } } },
+    })
+    res.json(members.map(m => m.student).sort((a, b) => a.displayName.localeCompare(b.displayName)))
+  } catch (err) { next(err) }
+})
+
+// POST /api/classes/:id/shares — teacher or class member shares a set they own with the whole class
+// (replaces any pick-classmates shares of that set in this class)
+router.post('/:id/shares', requireAuth, async (req, res, next) => {
+  try {
+    const cls = await prisma.class.findUnique({ where: { id: req.params.id } })
+    if (!cls || !(await canShareInClass(req.user, cls))) return res.status(403).json({ error: 'Forbidden' })
 
     const { setId } = req.body
     const set = await prisma.wordSet.findUnique({ where: { id: setId } })
     if (!set || set.ownerId !== req.user.id) return res.status(403).json({ error: 'You do not own that set.' })
 
-    await prisma.setClassShare.upsert({
-      where: { setId_classId: { setId, classId: cls.id } },
-      update: {},
-      create: { setId, classId: cls.id },
-    })
+    await prisma.$transaction([
+      prisma.setStudentShare.deleteMany({ where: { setId, classId: cls.id } }),
+      prisma.setClassShare.upsert({
+        where: { setId_classId: { setId, classId: cls.id } },
+        update: {},
+        create: { setId, classId: cls.id },
+      }),
+    ])
     res.json({ ok: true })
   } catch (err) { next(err) }
 })
 
-// DELETE /api/classes/:id/shares/:setId — teacher unshares a set
-router.delete('/:id/shares/:setId', requireTeacher, async (req, res, next) => {
+// PUT /api/classes/:id/shares/:setId/students — a member shares a set they own with chosen classmates only
+// (replaces the previous picks and any whole-class share; an empty list unshares)
+router.put('/:id/shares/:setId/students', requireAuth, async (req, res, next) => {
   try {
     const cls = await prisma.class.findUnique({ where: { id: req.params.id } })
-    if (!cls || cls.teacherId !== req.user.id) return res.status(403).json({ error: 'Forbidden' })
+    if (!cls || !(await canShareInClass(req.user, cls))) return res.status(403).json({ error: 'Forbidden' })
 
-    await prisma.setClassShare.deleteMany({
-      where: { classId: cls.id, setId: req.params.setId },
+    const set = await prisma.wordSet.findUnique({ where: { id: req.params.setId } })
+    if (!set || set.ownerId !== req.user.id) return res.status(403).json({ error: 'You do not own that set.' })
+
+    const { studentIds } = req.body
+    if (!Array.isArray(studentIds)) return res.status(400).json({ error: 'studentIds must be an array' })
+    const wanted = [...new Set(studentIds)].filter(id => id !== req.user.id)
+    const members = await prisma.classMember.findMany({
+      where: { classId: cls.id, studentId: { in: wanted } },
+      select: { studentId: true },
     })
+    if (members.length !== wanted.length) return res.status(400).json({ error: 'Everyone you share with must be in this class.' })
+
+    await prisma.$transaction([
+      prisma.setClassShare.deleteMany({ where: { setId: set.id, classId: cls.id } }),
+      prisma.setStudentShare.deleteMany({ where: { setId: set.id, classId: cls.id } }),
+      prisma.setStudentShare.createMany({
+        data: members.map(m => ({ setId: set.id, classId: cls.id, studentId: m.studentId })),
+      }),
+    ])
+    res.json({ ok: true })
+  } catch (err) { next(err) }
+})
+
+// DELETE /api/classes/:id/shares/:setId — remove a set from this class entirely (whole class and picked classmates).
+// The teacher may remove any set from their class; a member only sets they own.
+router.delete('/:id/shares/:setId', requireAuth, async (req, res, next) => {
+  try {
+    const cls = await prisma.class.findUnique({ where: { id: req.params.id } })
+    if (!cls || !(await canShareInClass(req.user, cls))) return res.status(403).json({ error: 'Forbidden' })
+
+    const where = {
+      classId: cls.id,
+      setId: req.params.setId,
+      ...(cls.teacherId !== req.user.id && { set: { ownerId: req.user.id } }),
+    }
+    await prisma.$transaction([
+      prisma.setClassShare.deleteMany({ where }),
+      prisma.setStudentShare.deleteMany({ where }),
+    ])
     res.json({ ok: true })
   } catch (err) { next(err) }
 })

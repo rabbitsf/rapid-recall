@@ -54,5 +54,13 @@ export function useClasses() {
     return apiFetch(`/api/classes/${classId}/shares/${setId}`, { method: 'DELETE' })
   }
 
-  return { classes, loading, createClass, renameClass, deleteClass, addStudent, bulkAddStudents, removeStudent, shareSet, unshareSet, refetch: fetchClasses }
+  const getClassmates = async (classId) => {
+    return apiFetch(`/api/classes/${classId}/classmates`)
+  }
+
+  const shareSetWithStudents = async (classId, setId, studentIds) => {
+    return apiFetch(`/api/classes/${classId}/shares/${setId}/students`, { method: 'PUT', body: JSON.stringify({ studentIds }) })
+  }
+
+  return { classes, loading, createClass, renameClass, deleteClass, addStudent, bulkAddStudents, removeStudent, shareSet, unshareSet, getClassmates, shareSetWithStudents, refetch: fetchClasses }
 }

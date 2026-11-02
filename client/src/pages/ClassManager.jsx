@@ -219,6 +219,8 @@ export default function ClassManager() {
 
   const cls = classes.find(c => c.id === id)
   const mySets = sets.filter(s => s.ownerId === user.id)
+  const studentSets = sets.filter(s => s.ownerId !== user.id &&
+    (s.shares?.some(sh => sh.classId === id) || s.studentShares?.some(sh => sh.classId === id)))
 
   const [email, setEmail] = useState('')
   const [displayName, setDisplayName] = useState('')
@@ -263,6 +265,12 @@ export default function ClassManager() {
     if (sharedSetIds.has(setId)) await unshareSet(id, setId)
     else await shareSet(id, setId)
     refetch()
+    refetchSets()
+  }
+
+  const handleRemoveStudentSet = async (set) => {
+    if (!window.confirm(`Remove "${set.title}" from this class?`)) return
+    await unshareSet(id, set.id)
     refetchSets()
   }
 
@@ -366,6 +374,31 @@ export default function ClassManager() {
           </ul>
         )}
       </section>
+
+      {/* Sets students shared into this class */}
+      {studentSets.length > 0 && (
+        <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+          <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2"><Users size={20} className="text-crimson-600" /> Shared by Students</h3>
+          <ul className="space-y-3">
+            {studentSets.map(set => (
+              <li key={set.id} className="flex items-center justify-between p-3 rounded-xl bg-slate-50">
+                <div>
+                  <p className="font-medium text-slate-800 text-sm">{set.title}</p>
+                  <p className="text-xs text-slate-400">by {set.owner?.displayName} · {set.cards.length} cards</p>
+                  <p className="text-xs text-slate-500">
+                    {set.shares?.some(sh => sh.classId === id)
+                      ? 'Shared with the whole class'
+                      : `Shared with ${set.studentShares.filter(sh => sh.classId === id).map(sh => sh.student.displayName).join(', ')}`}
+                  </p>
+                </div>
+                <button onClick={() => handleRemoveStudentSet(set)} className="px-4 py-2 rounded-xl text-sm font-medium transition-colors touch-manipulation flex items-center gap-2 bg-slate-100 text-slate-600 hover:bg-red-50 hover:text-red-600">
+                  <X size={14} /> Remove
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
     </div>
   )
 }

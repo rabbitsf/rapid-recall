@@ -1,21 +1,23 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Play, Edit3, Trash2, Layers, BookOpen, GraduationCap } from 'lucide-react'
+import { Plus, Play, Edit3, Trash2, Layers, BookOpen, GraduationCap, Share2 } from 'lucide-react'
 import { useSets } from '../hooks/useSets.js'
 import { useStudyLogs } from '../hooks/useStudyLogs.js'
 import { useClasses } from '../hooks/useClasses.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import StudyCalendar from '../components/StudyCalendar.jsx'
 import StudyMenu from '../components/StudyMenu.jsx'
+import ShareWithClassModal from '../components/ShareWithClassModal.jsx'
 
 export default function StudentDashboard() {
   const navigate = useNavigate()
   const { user } = useAuth()
-  const { sets, loading, saveSet, deleteSet } = useSets()
+  const { sets, loading, saveSet, deleteSet, refetch: refetchSets } = useSets()
   const { logs, updateLog } = useStudyLogs()
-  const { classes } = useClasses()
+  const { classes, shareSet, unshareSet, getClassmates, shareSetWithStudents } = useClasses()
   const [tab, setTab] = useState('my') // 'my' | 'class'
   const [activeSet, setActiveSet] = useState(null)
+  const [sharingSet, setSharingSet] = useState(null)
 
   const mySets = sets.filter(s => s.ownerId === user.id)
   const classSets = sets.filter(s => s.ownerId !== user.id)
@@ -53,7 +55,7 @@ export default function StudentDashboard() {
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-3xl font-bold text-slate-800">{tab === 'my' ? 'My Word Sets' : 'Class Word Sets'}</h2>
-          <p className="text-slate-500 mt-1">{tab === 'my' ? 'Create and practice your own sets.' : 'Sets shared by your teacher.'}</p>
+          <p className="text-slate-500 mt-1">{tab === 'my' ? 'Create and practice your own sets.' : 'Sets shared by your teachers and classmates.'}</p>
         </div>
         {tab === 'my' && (
           <button onClick={() => navigate('/sets/new')} className="bg-crimson-600 hover:bg-crimson-700 text-white px-5 py-3 rounded-xl font-medium flex items-center gap-2 shadow-sm transition-all hover:shadow-md active:scale-95 touch-manipulation">
@@ -73,15 +75,28 @@ export default function StudentDashboard() {
           onPlay={setActiveSet}
           onEdit={(id) => navigate(`/sets/${id}/edit`)}
           onDelete={handleDelete}
+          onShare={classes.length > 0 ? setSharingSet : null}
           emptyMsg={tab === 'my' ? 'No sets yet — create your first one!' : 'No class sets yet. Ask your teacher to share some.'}
           onCreateNew={tab === 'my' ? () => navigate('/sets/new') : null}
+        />
+      )}
+
+      {sharingSet && (
+        <ShareWithClassModal
+          set={sharingSet}
+          classes={classes}
+          onShareClass={shareSet}
+          onShareStudents={shareSetWithStudents}
+          onUnshare={unshareSet}
+          getClassmates={getClassmates}
+          onClose={() => { setSharingSet(null); refetchSets() }}
         />
       )}
     </div>
   )
 }
 
-function SetGrid({ sets, ownerId, onPlay, onEdit, onDelete, emptyMsg, onCreateNew }) {
+function SetGrid({ sets, ownerId, onPlay, onEdit, onDelete, onShare, emptyMsg, onCreateNew }) {
   if (!sets.length) return (
     <div className="bg-white rounded-2xl border border-dashed border-slate-300 p-12 text-center">
       <Layers className="mx-auto h-12 w-12 text-slate-300 mb-4" />
@@ -98,6 +113,7 @@ function SetGrid({ sets, ownerId, onPlay, onEdit, onDelete, emptyMsg, onCreateNe
             <h3 className="text-xl font-bold text-slate-800 group-hover:text-crimson-600 transition-colors line-clamp-2">{set.title}</h3>
             {set.ownerId === ownerId && (
               <div className="flex gap-1">
+                {onShare && <button onClick={e => { e.stopPropagation(); onShare(set) }} className="p-2 text-slate-400 hover:text-crimson-600 hover:bg-crimson-50 rounded-lg touch-manipulation"><Share2 size={18} /></button>}
                 <button onClick={e => { e.stopPropagation(); onEdit(set.id) }} className="p-2 text-slate-400 hover:text-crimson-600 hover:bg-crimson-50 rounded-lg touch-manipulation"><Edit3 size={18} /></button>
                 <button onClick={e => onDelete(set.id, e)} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg touch-manipulation"><Trash2 size={18} /></button>
               </div>
@@ -105,6 +121,12 @@ function SetGrid({ sets, ownerId, onPlay, onEdit, onDelete, emptyMsg, onCreateNe
           </div>
           {set.owner && set.ownerId !== ownerId && (
             <p className="text-xs text-slate-400 mb-2">by {set.owner.displayName}</p>
+          )}
+          {set.ownerId === ownerId && (set.shares?.length > 0 || set.studentShares?.length > 0) && (
+            <div className="flex flex-wrap gap-1 mb-2">
+              {set.shares?.map(sh => <span key={sh.classId} className="text-xs bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full">{sh.class.name}</span>)}
+              {set.studentShares?.length > 0 && <span className="text-xs bg-violet-50 text-violet-700 px-2 py-0.5 rounded-full">{set.studentShares.length} classmate{set.studentShares.length === 1 ? '' : 's'}</span>}
+            </div>
           )}
           <div className="mt-auto pt-4 border-t border-slate-100 flex items-center justify-between">
             <span className="text-sm font-medium text-slate-500 bg-slate-100 px-3 py-1 rounded-full flex items-center gap-1.5"><Layers size={14} /> {set.cards.length} Cards</span>

@@ -33,6 +33,7 @@ model User {
   googleToken       GoogleToken?
   classroomStudents ClassroomStudentMapping[]
   cardProgress      CardProgress[]
+  receivedShares    SetStudentShare[]
 
   @@map("users")
 }
@@ -83,6 +84,7 @@ model Class {
   teacher          User            @relation("TeacherClasses", fields: [teacherId], references: [id])
   members          ClassMember[]
   shares           SetClassShare[]
+  studentShares    SetStudentShare[]
   classroomSyncs   ClassroomSync[]
 
   @@map("classes")
@@ -116,6 +118,7 @@ model WordSet {
   copiedFrom WordSet?        @relation("SetCopy", fields: [copiedFromSetId], references: [id], onDelete: SetNull)
   copies     WordSet[]       @relation("SetCopy")
   progress   CardProgress[]
+  studentShares SetStudentShare[]
 
   @@map("word_sets")
 }
@@ -146,6 +149,22 @@ model SetClassShare {
 
   @@id([setId, classId])
   @@map("set_class_shares")
+}
+
+// A student shares their set with chosen classmates, scoped to the class it was shared through
+// (that class's teacher can see/remove it; it goes away when either student leaves the class)
+model SetStudentShare {
+  setId     String @map("set_id")
+  classId   String @map("class_id")
+  studentId String @map("student_id")
+
+  set     WordSet @relation(fields: [setId], references: [id], onDelete: Cascade)
+  class   Class   @relation(fields: [classId], references: [id], onDelete: Cascade)
+  student User    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@id([setId, classId, studentId])
+  @@index([studentId])
+  @@map("set_student_shares")
 }
 
 model StudyLog {
