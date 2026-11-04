@@ -12,8 +12,8 @@ router.get('/google/callback',
 
 router.get('/me', (req, res) => {
   if (!req.user) return res.status(401).json({ user: null })
-  const { id, email, displayName, photoUrl, role } = req.user
-  res.json({ user: { id, email, displayName, photoUrl, role } })
+  const { id, email, displayName, photoUrl, role, gradeGroup } = req.user
+  res.json({ user: { id, email, displayName, photoUrl, role, gradeGroup } })
 })
 
 router.post('/logout', (req, res, next) => {

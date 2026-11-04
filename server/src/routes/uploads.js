@@ -5,6 +5,8 @@ import { fileURLToPath } from 'url'
 import fs from 'fs'
 import prisma from '../db.js'
 import { requireAuth } from '../middleware/requireAuth.js'
+import { canEditSet } from '../lib/setAccess.js'
+import { isStaff } from '../lib/roles.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const uploadsDir = path.join(__dirname, '../../uploads/cards')
@@ -58,7 +60,7 @@ async function requireOwnedCard(req, res, next) {
       include: { set: { select: { ownerId: true } } },
     })
     if (!card) return res.status(404).json({ error: 'Card not found' })
-    if (card.set.ownerId !== req.user.id) return res.status(403).json({ error: 'Forbidden' })
+    if (!canEditSet(req.user, card.set)) return res.status(403).json({ error: 'Forbidden' })
     req.card = card
     next()
   } catch (err) { next(err) }
@@ -88,7 +90,7 @@ router.post('/cards/:cardId/image', requireAuth, requireOwnedCard,
   })
 
 const requireTeacher = (req, res, next) => {
-  if (!['teacher', 'admin'].includes(req.user?.role)) return res.status(403).json({ error: 'Only teachers can record pronunciations' })
+  if (!isStaff(req.user?.role)) return res.status(403).json({ error: 'Only teachers can record pronunciations' })
   next()
 }
 

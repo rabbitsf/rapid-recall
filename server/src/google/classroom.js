@@ -1,5 +1,6 @@
 import { google } from 'googleapis'
 import prisma from '../db.js'
+import { ADMIN_ROLES } from '../lib/roles.js'
 
 function makeOAuth2Client() {
   return new google.auth.OAuth2(
@@ -40,7 +41,7 @@ async function resolveToken(userId) {
   if (own) return { token: own, isOwn: true }
 
   const admin = await prisma.googleToken.findFirst({
-    where: { user: { role: 'admin', active: true } },
+    where: { user: { role: { in: ADMIN_ROLES }, active: true } },
     include: { user: { select: { displayName: true } } },
   })
   return admin ? { token: admin, isOwn: false } : null

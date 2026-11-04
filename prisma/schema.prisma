@@ -9,6 +9,7 @@ datasource db {
 }
 
 enum Role {
+  super_admin
   admin
   teacher
   student
@@ -108,6 +109,9 @@ model WordSet {
   ownerId         String   @map("owner_id")
   isPublic        Boolean  @default(false) @map("is_public")
   isSpanish       Boolean  @default(false) @map("is_spanish")
+  // Student owner shared it with their whole grade (visible to students whose gradeGroup matches the
+  // owner's CURRENT gradeGroup, and to all teachers/admins) — see server/src/lib/setAccess.js
+  sharedWithGrade Boolean  @default(false) @map("shared_with_grade")
   copiedFromSetId String?  @map("copied_from_set_id")
   createdAt       DateTime @default(now()) @map("created_at")
 

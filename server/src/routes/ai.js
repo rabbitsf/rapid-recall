@@ -2,7 +2,7 @@ import { Router } from 'express'
 import OpenAI from 'openai'
 import prisma from '../db.js'
 import { requireAuth } from '../middleware/requireAuth.js'
-import { findAccessibleSet } from '../lib/setAccess.js'
+import { findAccessibleSet, canEditSet } from '../lib/setAccess.js'
 
 const router = Router()
 
@@ -42,7 +42,7 @@ function sentencePrompt(term, definition, isSpanish) {
 // so these paid API calls can't be triggered for cards the user can't see.
 async function loadStudyableCard(req, res) {
   const card = await prisma.card.findUnique({ where: { id: req.params.cardId } })
-  const set = card && await findAccessibleSet(req.user.id, card.setId)
+  const set = card && await findAccessibleSet(req.user, card.setId)
   if (!set) { res.status(404).json({ error: 'Card not found' }); return null }
   return { card, set }
 }
@@ -112,7 +112,7 @@ router.post('/cards/:cardId/sentence', requireAuth, async (req, res, next) => {
 router.post('/sets/:setId/sentences', requireAuth, async (req, res, next) => {
   try {
     const set = await prisma.wordSet.findUnique({ where: { id: req.params.setId }, select: { ownerId: true, isSpanish: true } })
-    if (!set || set.ownerId !== req.user.id) return res.status(404).json({ error: 'Set not found or empty' })
+    if (!canEditSet(req.user, set)) return res.status(404).json({ error: 'Set not found or empty' })
     const allCards = await prisma.card.findMany({
       where: { setId: req.params.setId },
       select: { id: true, term: true, definition: true, exampleSentence: true },

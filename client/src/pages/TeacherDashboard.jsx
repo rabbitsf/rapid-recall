@@ -6,11 +6,12 @@ import { useClasses } from '../hooks/useClasses.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import StudyMenu from '../components/StudyMenu.jsx'
 import ShareSetModal from '../components/ShareSetModal.jsx'
+import { GRADES, gradeName } from '../utils/grades.js'
 
 export default function TeacherDashboard() {
   const navigate = useNavigate()
   const { user } = useAuth()
-  const { sets, loading: setsLoading, saveSet, deleteSet, shareSet } = useSets()
+  const { sets, loading: setsLoading, saveSet, deleteSet, shareSet, setGradeShare } = useSets()
   const { classes, loading: classesLoading, createClass, renameClass, deleteClass } = useClasses()
   const [newClassName, setNewClassName] = useState('')
   const [creating, setCreating] = useState(false)
@@ -36,6 +37,16 @@ export default function TeacherDashboard() {
 
   const mySets = sets.filter(s => s.ownerId === user.id && !s.copiedFromSetId)
   const sharedWithMe = sets.filter(s => s.ownerId === user.id && s.copiedFromSetId)
+  // Sets students shared with their whole grade — every teacher can review and remove them
+  const gradeShared = sets.filter(s => s.ownerId !== user.id && s.sharedWithGrade)
+  const gradeOrder = g => { const i = GRADES.indexOf(g); return i < 0 ? GRADES.length : i }
+  const gradeGroups = [...new Set(gradeShared.map(s => s.owner?.gradeGroup ?? null))].sort((a, b) => gradeOrder(a) - gradeOrder(b))
+
+  const handleRemoveGradeShare = async (set, e) => {
+    e.stopPropagation()
+    if (!window.confirm(`Stop sharing "${set.title}" by ${set.owner?.displayName} with ${gradeName(set.owner?.gradeGroup) || 'their grade'}?`)) return
+    try { await setGradeShare(set.id, false) } catch (err) { alert(err.message) }
+  }
 
   const handleCreateClass = async (e) => {
     e.preventDefault()
@@ -196,6 +207,33 @@ export default function TeacherDashboard() {
           <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2 mb-4"><Share2 size={20} className="text-crimson-600" /> Shared with Me</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {sharedWithMe.map(renderSetCard)}
+          </div>
+        </section>
+      )}
+
+      {/* Student grade shares */}
+      {gradeShared.length > 0 && (
+        <section>
+          <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2 mb-1"><GraduationCap size={20} className="text-crimson-600" /> Shared by Students with Their Grade</h3>
+          <p className="text-sm text-slate-500 mb-4">Students in that grade can study these. You can remove a share you don't want.</p>
+          <div className="space-y-6">
+            {gradeGroups.map(g => (
+              <div key={g ?? 'none'}>
+                <h4 className="text-sm font-semibold text-slate-600 mb-2">{gradeName(g) || 'No grade assigned (not visible to students)'}</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {gradeShared.filter(s => (s.owner?.gradeGroup ?? null) === g).map(set => (
+                    <div key={set.id} onClick={() => setActiveSet(set)} className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm hover:shadow-md hover:border-crimson-200 transition-all cursor-pointer group flex flex-col touch-manipulation">
+                      <div className="flex justify-between items-start gap-2 mb-1">
+                        <h3 className="font-bold text-slate-800 group-hover:text-crimson-600 transition-colors line-clamp-2">{set.title}</h3>
+                        <button onClick={e => handleRemoveGradeShare(set, e)} title="Remove grade share" className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg touch-manipulation shrink-0"><X size={16} /></button>
+                      </div>
+                      <p className="text-xs text-slate-400 mb-3">by {set.owner?.displayName}</p>
+                      <span className="mt-auto text-sm font-medium text-slate-500 bg-slate-100 px-3 py-1 rounded-full flex items-center gap-1.5 w-fit"><Layers size={14} /> {set.cards.length} Cards</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
           </div>
         </section>
       )}

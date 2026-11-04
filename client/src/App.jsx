@@ -10,6 +10,8 @@ import StudentProgress from './pages/StudentProgress.jsx'
 import SetEditor from './pages/SetEditor.jsx'
 import AdminDashboard from './pages/AdminDashboard.jsx'
 import ClassroomImport from './pages/ClassroomImport.jsx'
+import AllSets from './pages/AllSets.jsx'
+import { isAdmin, isSuperAdmin } from './utils/roles.js'
 
 function RequireAuth({ children }) {
   const { user, loading } = useAuth()
@@ -39,7 +41,8 @@ export default function App() {
                   ? <StudentDashboard key={location.key} />
                   : <TeacherDashboard key={location.key} />
               } />
-              <Route path="/admin" element={user?.role === 'admin' ? <AdminDashboard /> : <Navigate to="/" replace />} />
+              <Route path="/admin" element={isAdmin(user?.role) ? <AdminDashboard /> : <Navigate to="/" replace />} />
+              <Route path="/all-sets" element={isSuperAdmin(user?.role) ? <AllSets /> : <Navigate to="/" replace />} />
               <Route path="/sets/new" element={<SetEditor />} />
               <Route path="/sets/:id/edit" element={<SetEditor />} />
               <Route path="/classes/:id" element={<ClassManager />} />

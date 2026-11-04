@@ -12,7 +12,7 @@ import ShareWithClassModal from '../components/ShareWithClassModal.jsx'
 export default function StudentDashboard() {
   const navigate = useNavigate()
   const { user } = useAuth()
-  const { sets, loading, saveSet, deleteSet, refetch: refetchSets } = useSets()
+  const { sets, loading, saveSet, deleteSet, setGradeShare, refetch: refetchSets } = useSets()
   const { logs, updateLog } = useStudyLogs()
   const { classes, shareSet, unshareSet, getClassmates, shareSetWithStudents } = useClasses()
   const [tab, setTab] = useState('my') // 'my' | 'class'
@@ -21,6 +21,8 @@ export default function StudentDashboard() {
 
   const mySets = sets.filter(s => s.ownerId === user.id)
   const classSets = sets.filter(s => s.ownerId !== user.id)
+  // Students can share with their grade (needs an assigned grade) or with classes they belong to
+  const canShare = classes.length > 0 || !!user.gradeGroup
 
   const handleDelete = async (id, e) => {
     e.stopPropagation()
@@ -41,21 +43,21 @@ export default function StudentDashboard() {
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <StudyCalendar logs={logs} onUpdateLog={updateLog} />
 
-      {classes.length > 0 && (
+      {(canShare || classSets.length > 0) && (
         <div className="flex gap-2 bg-white rounded-2xl border border-slate-200 p-1.5 shadow-sm w-fit">
           <button onClick={() => setTab('my')} className={`px-5 py-2.5 rounded-xl font-semibold text-sm transition-colors flex items-center gap-2 ${tab === 'my' ? 'bg-crimson-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
             <BookOpen size={16} /> My Sets
           </button>
           <button onClick={() => setTab('class')} className={`px-5 py-2.5 rounded-xl font-semibold text-sm transition-colors flex items-center gap-2 ${tab === 'class' ? 'bg-crimson-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
-            <GraduationCap size={16} /> Class Sets {classSets.length > 0 && <span className="bg-crimson-100 text-crimson-700 text-xs px-2 py-0.5 rounded-full">{classSets.length}</span>}
+            <GraduationCap size={16} /> Shared Sets {classSets.length > 0 && <span className="bg-crimson-100 text-crimson-700 text-xs px-2 py-0.5 rounded-full">{classSets.length}</span>}
           </button>
         </div>
       )}
 
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-3xl font-bold text-slate-800">{tab === 'my' ? 'My Word Sets' : 'Class Word Sets'}</h2>
-          <p className="text-slate-500 mt-1">{tab === 'my' ? 'Create and practice your own sets.' : 'Sets shared by your teachers and classmates.'}</p>
+          <h2 className="text-3xl font-bold text-slate-800">{tab === 'my' ? 'My Word Sets' : 'Shared Word Sets'}</h2>
+          <p className="text-slate-500 mt-1">{tab === 'my' ? 'Create and practice your own sets.' : 'Sets shared by your teachers, classmates and grade.'}</p>
         </div>
         {tab === 'my' && (
           <button onClick={() => navigate('/sets/new')} className="bg-crimson-600 hover:bg-crimson-700 text-white px-5 py-3 rounded-xl font-medium flex items-center gap-2 shadow-sm transition-all hover:shadow-md active:scale-95 touch-manipulation">
@@ -75,8 +77,8 @@ export default function StudentDashboard() {
           onPlay={setActiveSet}
           onEdit={(id) => navigate(`/sets/${id}/edit`)}
           onDelete={handleDelete}
-          onShare={classes.length > 0 ? setSharingSet : null}
-          emptyMsg={tab === 'my' ? 'No sets yet — create your first one!' : 'No class sets yet. Ask your teacher to share some.'}
+          onShare={canShare ? setSharingSet : null}
+          emptyMsg={tab === 'my' ? 'No sets yet — create your first one!' : 'No shared sets yet. Ask your teacher to share some.'}
           onCreateNew={tab === 'my' ? () => navigate('/sets/new') : null}
         />
       )}
@@ -85,6 +87,8 @@ export default function StudentDashboard() {
         <ShareWithClassModal
           set={sharingSet}
           classes={classes}
+          gradeGroup={user.gradeGroup}
+          onGradeShare={on => setGradeShare(sharingSet.id, on)}
           onShareClass={shareSet}
           onShareStudents={shareSetWithStudents}
           onUnshare={unshareSet}
@@ -122,8 +126,14 @@ function SetGrid({ sets, ownerId, onPlay, onEdit, onDelete, onShare, emptyMsg, o
           {set.owner && set.ownerId !== ownerId && (
             <p className="text-xs text-slate-400 mb-2">by {set.owner.displayName}</p>
           )}
-          {set.ownerId === ownerId && (set.shares?.length > 0 || set.studentShares?.length > 0) && (
+          {set.ownerId !== ownerId && set.sharedWithGrade && (
             <div className="flex flex-wrap gap-1 mb-2">
+              <span className="text-xs bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full">Shared with your grade</span>
+            </div>
+          )}
+          {set.ownerId === ownerId && (set.sharedWithGrade || set.shares?.length > 0 || set.studentShares?.length > 0) && (
+            <div className="flex flex-wrap gap-1 mb-2">
+              {set.sharedWithGrade && <span className="text-xs bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full">My grade</span>}
               {set.shares?.map(sh => <span key={sh.classId} className="text-xs bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full">{sh.class.name}</span>)}
               {set.studentShares?.length > 0 && <span className="text-xs bg-violet-50 text-violet-700 px-2 py-0.5 rounded-full">{set.studentShares.length} classmate{set.studentShares.length === 1 ? '' : 's'}</span>}
             </div>

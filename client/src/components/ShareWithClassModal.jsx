@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react'
-import { Share2, X, Users, Check, UserCheck } from 'lucide-react'
+import { Share2, X, Users, Check, UserCheck, GraduationCap } from 'lucide-react'
+import { gradeName } from '../utils/grades.js'
 
-// Student shares one of their own sets, per class: with the whole class or with chosen classmates
-export default function ShareWithClassModal({ set, classes, onShareClass, onShareStudents, onUnshare, getClassmates, onClose }) {
+// Student shares one of their own sets: with their whole grade, and/or per class with the whole class or chosen classmates
+export default function ShareWithClassModal({ set, classes, gradeGroup, onGradeShare, onShareClass, onShareStudents, onUnshare, getClassmates, onClose }) {
+  const [gradeShared, setGradeShared] = useState(!!set.sharedWithGrade)
   // classId -> 'class' | [studentId, ...]; absent = not shared
   const [shared, setShared] = useState(() => {
     const init = {}
@@ -30,6 +32,13 @@ export default function ShareWithClassModal({ set, classes, onShareClass, onShar
     finally { setBusyId(null) }
   }
 
+  const toggleGrade = async () => {
+    setBusyId('grade'); setError('')
+    try { await onGradeShare(!gradeShared); setGradeShared(!gradeShared) }
+    catch (err) { setError(err.message) }
+    finally { setBusyId(null) }
+  }
+
   const toggleWholeClass = (classId) => shared[classId] === 'class'
     ? run(classId, () => onUnshare(classId, set.id), null)
     : run(classId, () => onShareClass(classId, set.id), 'class')
@@ -46,9 +55,21 @@ export default function ShareWithClassModal({ set, classes, onShareClass, onShar
           <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2"><Share2 size={18} className="text-crimson-600" /> Share with Classmates</h3>
           <button onClick={onClose} className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg"><X size={18} /></button>
         </div>
-        <p className="text-sm text-slate-500 mb-4">Share "{set.title}" with a whole class or just the classmates you pick. Your teacher can see what you share. Only you can edit it.</p>
+        <p className="text-sm text-slate-500 mb-4">Share "{set.title}" with your grade, a whole class, or just the classmates you pick. Your teachers can see what you share. Only you can edit it.</p>
 
         <ul className="flex-1 overflow-y-auto space-y-2 mb-4">
+          {gradeGroup && (
+            <li className="p-3 rounded-xl bg-slate-50 flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <p className="font-medium text-slate-800 text-sm truncate">My whole grade ({gradeName(gradeGroup)})</p>
+                <p className="text-xs text-slate-400 truncate">{gradeShared ? 'Every student in your grade can study it' : 'Not shared'}</p>
+              </div>
+              <button onClick={toggleGrade} disabled={busyId === 'grade'}
+                className={`px-3 py-2 rounded-xl text-sm font-medium transition-colors touch-manipulation flex items-center gap-1.5 disabled:opacity-60 shrink-0 ${gradeShared ? 'bg-emerald-50 text-emerald-700 hover:bg-red-50 hover:text-red-600' : 'bg-crimson-50 text-crimson-600 hover:bg-crimson-100'}`}>
+                {gradeShared ? <><X size={14} /> Unshare</> : <><GraduationCap size={14} /> Whole grade</>}
+              </button>
+            </li>
+          )}
           {classes.map(cls => {
             const state = shared[cls.id]
             const busy = busyId === cls.id

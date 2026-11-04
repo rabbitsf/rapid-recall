@@ -1,12 +1,15 @@
 import { useState } from 'react'
 import { ShieldCheck, Plus, UserCheck, UserX, GraduationCap, BookOpen, X, Trash2, Users } from 'lucide-react'
 import { useUsers } from '../hooks/useUsers.js'
+import { useAuth } from '../context/AuthContext.jsx'
+import { ROLES, ROLE_LABEL, isSuperAdmin } from '../utils/roles.js'
+import { GRADES, GRADE_LABEL } from '../utils/grades.js'
 
-const ROLES = ['student', 'teacher', 'admin']
-const GRADES = ['K', '1', '2', '3', '4', '5', '6', '7', '8']
-const GRADE_LABEL = { K: 'K', '1': '1st', '2': '2nd', '3': '3rd', '4': '4th', '5': '5th', '6': '6th', '7': '7th', '8': '8th' }
+// Only a super admin may grant the super admin role (enforced server-side in routes/users.js)
+const assignableRoles = (me) => isSuperAdmin(me?.role) ? ROLES : ROLES.filter(r => r !== 'super_admin')
 
 const ROLE_BADGE = {
+  super_admin: 'bg-amber-100 text-amber-800',
   admin:   'bg-rose-100 text-rose-700',
   teacher: 'bg-blue-100 text-blue-700',
   student: 'bg-emerald-100 text-emerald-700',
@@ -111,7 +114,7 @@ function BulkAddModal({ onClose, onBulkCreate }) {
   )
 }
 
-function AddUserModal({ onClose, onCreate }) {
+function AddUserModal({ onClose, onCreate, roles }) {
   const [form, setForm] = useState({ email: '', displayName: '', role: 'student' })
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
@@ -147,7 +150,7 @@ function AddUserModal({ onClose, onCreate }) {
             <label className="block text-sm font-medium text-slate-700 mb-1">Role</label>
             <select value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value }))}
               className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-crimson-500 text-sm bg-white">
-              {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+              {roles.map(r => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
             </select>
           </div>
           {error && <p className="text-red-600 text-sm bg-red-50 px-4 py-2 rounded-xl">{error}</p>}
@@ -165,6 +168,10 @@ function AddUserModal({ onClose, onCreate }) {
 
 export default function AdminDashboard() {
   const { users, loading, createUser, updateUser, batchAction, bulkCreate } = useUsers()
+  const { user: me } = useAuth()
+  const roles = assignableRoles(me)
+  // Regular admins can't change or select super admins; nobody changes their own role
+  const locked = (u) => u.role === 'super_admin' && !isSuperAdmin(me?.role)
   const [showAdd, setShowAdd] = useState(false)
   const [showBulk, setShowBulk] = useState(false)
   const [search, setSearch] = useState('')
@@ -176,7 +183,7 @@ export default function AdminDashboard() {
   const [batchError, setBatchError] = useState(null)
 
   // ── Derived stats ──────────────────────────────────────────────
-  const counts = { admin: 0, teacher: 0, student: 0, inactive: 0 }
+  const counts = { super_admin: 0, admin: 0, teacher: 0, student: 0, inactive: 0 }
   users.forEach(u => { if (!u.active) counts.inactive++; else counts[u.role] = (counts[u.role] ?? 0) + 1 })
 
   const gradeCounts = Object.fromEntries(GRADES.map(g => [g, 0]))
@@ -225,7 +232,7 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      {showAdd && <AddUserModal onClose={() => setShowAdd(false)} onCreate={createUser} />}
+      {showAdd && <AddUserModal onClose={() => setShowAdd(false)} onCreate={createUser} roles={roles} />}
       {showBulk && <BulkAddModal onClose={() => setShowBulk(false)} onBulkCreate={bulkCreate} />}
 
       <div>
@@ -236,7 +243,7 @@ export default function AdminDashboard() {
       {/* Role stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
-          { label: 'Admins',   count: counts.admin,    icon: <ShieldCheck size={18} />,   cls: 'text-rose-600 bg-rose-50' },
+          { label: 'Admins',   count: counts.admin + counts.super_admin,    icon: <ShieldCheck size={18} />,   cls: 'text-rose-600 bg-rose-50' },
           { label: 'Teachers', count: counts.teacher,  icon: <GraduationCap size={18} />, cls: 'text-amber-600 bg-amber-50' },
           { label: 'Students', count: counts.student,  icon: <BookOpen size={18} />,      cls: 'text-crimson-600 bg-crimson-50' },
           { label: 'Inactive', count: counts.inactive, icon: <UserX size={18} />,         cls: 'text-slate-500 bg-slate-100' },
@@ -299,14 +306,14 @@ export default function AdminDashboard() {
           </div>
           {/* Role filter pills */}
           <div className="flex gap-2 flex-wrap">
-            {['all', 'admin', 'teacher', 'student'].map(r => (
+            {['all', 'super_admin', 'admin', 'teacher', 'student'].map(r => (
               <button key={r} onClick={() => { setRoleFilter(r); setSelected(new Set()) }}
                 className={`px-3 py-1 rounded-full text-xs font-semibold capitalize transition-colors ${
                   roleFilter === r
                     ? 'bg-crimson-600 text-white'
                     : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                 }`}>
-                {r === 'all' ? 'All Roles' : r}
+                {r === 'all' ? 'All Roles' : ROLE_LABEL[r]}
               </button>
             ))}
           </div>
@@ -363,7 +370,7 @@ export default function AdminDashboard() {
             <div className="divide-y divide-slate-50">
               {filtered.map(u => (
                 <div key={u.id} className={`flex items-center gap-3 px-4 py-3 transition-colors ${u.active ? 'hover:bg-slate-50' : 'opacity-50 bg-slate-50'}`}>
-                  <input type="checkbox" checked={selected.has(u.id)} onChange={() => toggleOne(u.id)}
+                  <input type="checkbox" checked={selected.has(u.id)} onChange={() => toggleOne(u.id)} disabled={locked(u)}
                     className="w-4 h-4 accent-crimson-600 rounded cursor-pointer shrink-0" />
                   <div className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm shrink-0 ${ROLE_BADGE[u.role]}`}>
                     {u.displayName?.[0]?.toUpperCase()}
@@ -377,11 +384,15 @@ export default function AdminDashboard() {
                       {u.gradeGroup ? GRADE_LABEL[u.gradeGroup] : '—'}
                     </span>
                   )}
-                  <select value={u.role} onChange={e => changeRole(u, e.target.value)}
-                    className={`text-xs font-semibold px-2 py-1 rounded-full border-0 outline-none cursor-pointer ${ROLE_BADGE[u.role]}`}>
-                    {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
-                  </select>
-                  <button onClick={() => toggle(u)} title={u.active ? 'Deactivate' : 'Activate'}
+                  {locked(u) || u.id === me?.id ? (
+                    <span className={`text-xs font-semibold px-2 py-1 rounded-full ${ROLE_BADGE[u.role]}`}>{ROLE_LABEL[u.role]}</span>
+                  ) : (
+                    <select value={u.role} onChange={e => changeRole(u, e.target.value)}
+                      className={`text-xs font-semibold px-2 py-1 rounded-full border-0 outline-none cursor-pointer ${ROLE_BADGE[u.role]}`}>
+                      {roles.map(r => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
+                    </select>
+                  )}
+                  <button onClick={() => toggle(u)} disabled={locked(u)} title={u.active ? 'Deactivate' : 'Activate'}
                     className={`p-2 rounded-lg transition-colors ${u.active ? 'text-emerald-600 hover:bg-red-50 hover:text-red-600' : 'text-slate-400 hover:bg-emerald-50 hover:text-emerald-600'}`}>
                     {u.active ? <UserCheck size={17} /> : <UserX size={17} />}
                   </button>

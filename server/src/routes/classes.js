@@ -1,13 +1,14 @@
 import { Router } from 'express'
 import prisma from '../db.js'
 import { requireAuth, requireTeacher } from '../middleware/requireAuth.js'
+import { isStaff, STAFF_ROLES } from '../lib/roles.js'
 
 const router = Router()
 
 // GET /api/classes — teacher gets their classes; student gets classes they belong to
 router.get('/', requireAuth, async (req, res, next) => {
   try {
-    if (req.user.role === 'teacher' || req.user.role === 'admin') {
+    if (isStaff(req.user.role)) {
       const classes = await prisma.class.findMany({
         where: { teacherId: req.user.id },
         include: { members: { include: { student: { select: { id: true, displayName: true, email: true, photoUrl: true } } } } },
@@ -54,7 +55,7 @@ router.get('/students', requireTeacher, async (req, res, next) => {
 router.get('/teachers', requireTeacher, async (req, res, next) => {
   try {
     const teachers = await prisma.user.findMany({
-      where: { role: { in: ['teacher', 'admin'] }, active: true, id: { not: req.user.id } },
+      where: { role: { in: STAFF_ROLES }, active: true, id: { not: req.user.id } },
       select: { id: true, email: true, displayName: true, photoUrl: true },
       orderBy: { displayName: 'asc' },
     })

@@ -22,7 +22,8 @@ export function useSets() {
 
   useEffect(() => { fetchSets() }, [fetchSets])
 
-  const saveSet = async ({ id, title, cards, isPublic = false, isSpanish = false }) => {
+  // isPublic is only sent when given, so saving an edit never un-publishes a set
+  const saveSet = async ({ id, title, cards, isPublic, isSpanish = false }) => {
     const body = JSON.stringify({ title, cards, isPublic, isSpanish })
     const data = id
       ? await apiFetch(`/api/sets/${id}`, { method: 'PUT', body })
@@ -39,9 +40,21 @@ export function useSets() {
     setSets(prev => prev.filter(s => s.id !== id))
   }
 
+  // One set by id (incl. sets outside the user's list that they may still open, e.g. super admin)
+  const fetchSet = (id) => apiFetch(`/api/sets/${id}`)
+
+  // Super admin: every set anyone created (no cards — open one with fetchSet)
+  const fetchAllSets = () => apiFetch('/api/sets/all')
+
+  // Student shares their own set with their whole grade; owner or any teacher/admin can stop it
+  const setGradeShare = async (id, on) => {
+    await apiFetch(`/api/sets/${id}/grade-share`, { method: on ? 'PUT' : 'DELETE' })
+    setSets(prev => prev.map(s => s.id === id ? { ...s, sharedWithGrade: on } : s))
+  }
+
   const shareSet = async (id, teacherId) => {
     return apiFetch(`/api/sets/${id}/share`, { method: 'POST', body: JSON.stringify({ teacherId }) })
   }
 
-  return { sets, loading, error, saveSet, deleteSet, shareSet, refetch: fetchSets }
+  return { sets, loading, error, saveSet, deleteSet, shareSet, fetchSet, fetchAllSets, setGradeShare, refetch: fetchSets }
 }

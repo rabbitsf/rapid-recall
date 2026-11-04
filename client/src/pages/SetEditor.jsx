@@ -5,15 +5,24 @@ import { Plus, Trash2, Upload, X, Image, Mic, Square, Volume2 } from 'lucide-rea
 import { useSets } from '../hooks/useSets.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import { canRecordAudio, playAudioUrl, startRecording } from '../utils/audio.js'
+import { isStaff } from '../utils/roles.js'
 
 export default function SetEditor() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { sets, saveSet } = useSets()
+  const { sets, loading: setsLoading, saveSet, fetchSet } = useSets()
   const { user } = useAuth()
-  const canRecord = ['teacher', 'admin'].includes(user?.role) && canRecordAudio()
+  const canRecord = isStaff(user?.role) && canRecordAudio()
 
-  const existing = id ? sets.find(s => s.id === id) : null
+  // Sets outside the user's own list (a super admin editing someone else's set) are fetched by id
+  const [fetched, setFetched] = useState(null)
+  const listed = id ? sets.find(s => s.id === id) : null
+  const existing = listed ?? (fetched?.id === id ? fetched : null)
+  useEffect(() => {
+    if (id && !setsLoading && !listed) fetchSet(id).then(setFetched).catch(err => setError(err.message))
+  }, [id, setsLoading, !!listed])
+  // Editing another user's set returns to All Sets
+  const backTo = existing && existing.ownerId !== user?.id ? '/all-sets' : '/'
   const [title, setTitle] = useState(existing?.title || '')
   const [isSpanish, setIsSpanish] = useState(existing?.isSpanish || false)
   const [cards, setCards] = useState(existing?.cards || [{ id: Date.now().toString(), term: '', definition: '' }])
@@ -149,7 +158,7 @@ export default function SetEditor() {
       setSaving(true)
       setError(null)
       await saveSet({ id: existing?.id ?? savedSetIdRef.current, title, cards: valid, isSpanish })
-      navigate('/')
+      navigate(backTo)
     } catch (err) {
       setError(err.message)
     } finally {
@@ -162,7 +171,7 @@ export default function SetEditor() {
       <div className="p-6 md:p-8 border-b border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h2 className="text-2xl font-bold text-slate-800">{existing ? 'Edit Word Set' : 'Create New Set'}</h2>
         <div className="flex gap-3 w-full sm:w-auto">
-          <button onClick={() => navigate('/')} className="flex-1 sm:flex-none px-5 py-3 rounded-xl font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors touch-manipulation">Cancel</button>
+          <button onClick={() => navigate(backTo)} className="flex-1 sm:flex-none px-5 py-3 rounded-xl font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors touch-manipulation">Cancel</button>
           <button onClick={handleSave} disabled={saving} className="flex-1 sm:flex-none px-6 py-3 rounded-xl font-medium text-white bg-crimson-600 hover:bg-crimson-700 disabled:opacity-60 transition-colors shadow-sm touch-manipulation">{saving ? 'Saving…' : 'Save Set'}</button>
         </div>
       </div>

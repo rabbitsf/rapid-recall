@@ -11,7 +11,7 @@ const progressSelect = { termKey: true, streak: true, correctCount: true, incorr
 // GET /api/card-progress/:setId — own per-term progress for a set
 router.get('/:setId', requireAuth, async (req, res, next) => {
   try {
-    const set = await findAccessibleSet(req.user.id, req.params.setId)
+    const set = await findAccessibleSet(req.user, req.params.setId)
     if (!set) return res.status(403).json({ error: 'Forbidden' })
     const rows = await prisma.cardProgress.findMany({
       where: { userId: req.user.id, setId: set.id },
@@ -29,7 +29,7 @@ router.post('/:setId', requireAuth, async (req, res, next) => {
       return res.status(400).json({ error: 'results must be a non-empty array (max 1000)' })
     }
     const userId = req.user.id
-    const set = await findAccessibleSet(userId, req.params.setId, { cards: { select: { term: true } } })
+    const set = await findAccessibleSet(req.user, req.params.setId, { cards: { select: { term: true } } })
     if (!set) return res.status(403).json({ error: 'Forbidden' })
 
     const validKeys = new Set(set.cards.map(c => termKey(c.term)))

@@ -14,7 +14,7 @@ router.post('/', requireAuth, async (req, res, next) => {
     }
 
     const userId = req.user.id
-    const set = await findAccessibleSet(userId, setId)
+    const set = await findAccessibleSet(req.user, setId)
     if (!set) return res.status(403).json({ error: 'Forbidden' })
 
     const result = await prisma.gameResult.create({

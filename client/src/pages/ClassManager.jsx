@@ -4,6 +4,7 @@ import { ArrowLeft, UserPlus, UserMinus, Share2, X, CheckCircle2, Users, Search 
 import { useClasses } from '../hooks/useClasses.js'
 import { useSets } from '../hooks/useSets.js'
 import { useAuth } from '../context/AuthContext.jsx'
+import { GRADES } from '../utils/grades.js'
 
 function BulkAddStudentsModal({ onClose, onBulkAdd }) {
   const [text, setText] = useState('')
@@ -107,7 +108,6 @@ function PickStudentsModal({ enrolledIds, onClose, onBulkAdd }) {
       .catch(() => { setError('Failed to load students'); setLoading(false) })
   }, [])
 
-  const GRADES = ['K', '1', '2', '3', '4', '5', '6', '7', '8']
   const unenrolled = all.filter(s => !enrolledIds.has(s.id))
   const filtered = unenrolled.filter(s => {
     if (gradeFilter === 'none' && s.gradeGroup != null) return false

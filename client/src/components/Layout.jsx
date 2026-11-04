@@ -1,8 +1,10 @@
-import { LogOut, GraduationCap, BookOpen, ShieldCheck } from 'lucide-react'
+import { LogOut, GraduationCap, BookOpen, ShieldCheck, Library } from 'lucide-react'
+import { isAdmin, isSuperAdmin, ROLE_LABEL } from '../utils/roles.js'
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext.jsx'
 
 const ROLE_STYLES = {
+  super_admin: { cls: 'bg-white/20 text-white', icon: <ShieldCheck size={14} /> },
   admin:   { cls: 'bg-white/20 text-white',  icon: <ShieldCheck size={14} /> },
   teacher: { cls: 'bg-white/20 text-white',  icon: <GraduationCap size={14} /> },
   student: { cls: 'bg-white/20 text-white',  icon: <BookOpen size={14} /> },
@@ -32,7 +34,12 @@ export default function Layout({ children }) {
 
           {user && (
             <div className="flex items-center gap-2">
-              {user.role === 'admin' && (pathname === '/admin'
+              {isSuperAdmin(user.role) && pathname !== '/all-sets' && (
+                <Link to="/all-sets" className="hidden sm:flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full bg-white/20 text-white hover:bg-white/30 transition-colors">
+                  <Library size={14} /> All Sets
+                </Link>
+              )}
+              {isAdmin(user.role) && (pathname === '/admin'
                 ? <Link to="/" className="hidden sm:flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full bg-white/20 text-white hover:bg-white/30 transition-colors">
                     <GraduationCap size={14} /> Teacher Panel
                   </Link>
@@ -42,7 +49,7 @@ export default function Layout({ children }) {
               )}
               <span className={`hidden sm:flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full ${roleStyle.cls}`}>
                 {roleStyle.icon}
-                {user.role}
+                {ROLE_LABEL[user.role] ?? user.role}
               </span>
               {user.photoUrl
                 ? <img src={user.photoUrl} alt={user.displayName} className="w-8 h-8 rounded-full border-2 border-white/30" />

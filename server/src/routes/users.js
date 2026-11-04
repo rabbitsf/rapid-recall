@@ -1,9 +1,18 @@
 import { Router } from 'express'
 import prisma from '../db.js'
 import { requireAdmin } from '../middleware/requireAuth.js'
+import { ROLES, isSuperAdmin } from '../lib/roles.js'
 
 const router = Router()
 router.use(requireAdmin)
+
+// Only a super admin may create a super admin, promote someone to it, or change/delete an existing one
+function roleError(actor, role) {
+  if (role === undefined) return null
+  if (!ROLES.includes(role)) return 'Invalid role'
+  if (role === 'super_admin' && !isSuperAdmin(actor.role)) return 'Only a super admin can grant the super admin role'
+  return null
+}
 
 // List all users
 router.get('/', async (_req, res, next) => {
@@ -21,6 +30,8 @@ router.post('/', async (req, res, next) => {
   try {
     const { email, displayName, role = 'student' } = req.body
     if (!email || !displayName) return res.status(400).json({ error: 'email and displayName required' })
+    const err = roleError(req.user, role)
+    if (err) return res.status(400).json({ error: err })
     const user = await prisma.user.create({
       data: { email: email.toLowerCase().trim(), displayName: displayName.trim(), role, active: true },
       select: { id: true, email: true, displayName: true, role: true, active: true, createdAt: true },
@@ -37,7 +48,12 @@ router.post('/batch', async (req, res, next) => {
   try {
     const { action, ids, gradeGroup } = req.body
     if (!Array.isArray(ids) || ids.length === 0) return res.status(400).json({ error: 'ids required' })
-    const safeIds = ids.filter(id => id !== req.user.id)   // never act on own account
+    let safeIds = ids.filter(id => id !== req.user.id)   // never act on own account
+    if (!isSuperAdmin(req.user.role)) {                   // regular admins can't touch super admins
+      const supers = await prisma.user.findMany({ where: { id: { in: safeIds }, role: 'super_admin' }, select: { id: true } })
+      const superIds = new Set(supers.map(u => u.id))
+      safeIds = safeIds.filter(id => !superIds.has(id))
+    }
 
     if (action === 'deactivate') {
       await prisma.user.updateMany({ where: { id: { in: safeIds } }, data: { active: false } })
@@ -76,6 +92,15 @@ router.post('/batch', async (req, res, next) => {
 router.put('/:id', async (req, res, next) => {
   try {
     const { displayName, role, active, gradeGroup } = req.body
+    const err = roleError(req.user, role)
+    if (err) return res.status(400).json({ error: err })
+    if (!isSuperAdmin(req.user.role)) {
+      const target = await prisma.user.findUnique({ where: { id: req.params.id }, select: { role: true } })
+      if (target?.role === 'super_admin') return res.status(403).json({ error: 'Only a super admin can change a super admin' })
+    }
+    if (req.params.id === req.user.id && role !== undefined && role !== req.user.role) {
+      return res.status(400).json({ error: 'Cannot change your own role' })
+    }
     const data = {}
     if (displayName !== undefined) data.displayName = displayName.trim()
     if (role !== undefined) data.role = role
@@ -116,7 +141,8 @@ router.post('/bulk', async (req, res, next) => {
       const displayName = u.displayName?.trim()
       const role = u.role || 'student'
       if (!email || !displayName) { failed.push({ email: email || '?', reason: 'Missing email or name' }); continue }
-      if (!['admin', 'teacher', 'student'].includes(role)) { failed.push({ email, reason: 'Invalid role' }); continue }
+      const rErr = roleError(req.user, role)
+      if (rErr) { failed.push({ email, reason: rErr }); continue }
       try {
         // Grade group only applies to students
         await prisma.user.create({ data: { email, displayName, role, active: true, gradeGroup: role === 'student' ? gg : null }, select: { id: true } })

@@ -1,27 +1,77 @@
 import { Router } from 'express'
 import prisma from '../db.js'
-import { requireAuth } from '../middleware/requireAuth.js'
-import { accessibleSetWhere } from '../lib/setAccess.js'
+import { requireAuth, requireSuperAdmin } from '../middleware/requireAuth.js'
+import { visibleSetWhere, findAccessibleSet, canEditSet } from '../lib/setAccess.js'
+import { isStaff, STAFF_ROLES } from '../lib/roles.js'
 import { termKey } from '../lib/termKey.js'
 
 const router = Router()
 
-// GET /api/sets — return own sets + sets shared with user's classes
+const SET_INCLUDE = {
+  cards: { orderBy: { position: 'asc' } },
+  owner: { select: { id: true, displayName: true, role: true, gradeGroup: true } },
+  shares: { include: { class: { select: { id: true, name: true } } } },
+  studentShares: { select: { classId: true, student: { select: { id: true, displayName: true } } } },
+  copiedFrom: { select: { id: true, title: true, owner: { select: { displayName: true } } } },
+}
+
+// GET /api/sets — own sets + sets shared with the user (class, classmate, grade, public)
 router.get('/', requireAuth, async (req, res, next) => {
   try {
     const sets = await prisma.wordSet.findMany({
-      where: await accessibleSetWhere(req.user.id),
-      include: {
-        cards: { orderBy: { position: 'asc' } },
-        owner: { select: { id: true, displayName: true, role: true } },
-        shares: { include: { class: { select: { id: true, name: true } } } },
-        studentShares: { select: { classId: true, student: { select: { id: true, displayName: true } } } },
-        copiedFrom: { select: { id: true, title: true, owner: { select: { displayName: true } } } },
+      where: await visibleSetWhere(req.user),
+      include: SET_INCLUDE,
+      orderBy: { createdAt: 'desc' },
+    })
+    res.json(sets)
+  } catch (err) { next(err) }
+})
+
+// GET /api/sets/all — super admin: every set anyone created (no cards; open one via GET /api/sets/:id)
+router.get('/all', requireSuperAdmin, async (_req, res, next) => {
+  try {
+    const sets = await prisma.wordSet.findMany({
+      select: {
+        id: true, title: true, ownerId: true, isPublic: true, sharedWithGrade: true, createdAt: true,
+        owner: { select: { id: true, displayName: true, email: true, role: true, gradeGroup: true } },
+        _count: { select: { cards: true } },
       },
       orderBy: { createdAt: 'desc' },
     })
-
     res.json(sets)
+  } catch (err) { next(err) }
+})
+
+// GET /api/sets/:id — one set the user may open (super admin: any set)
+router.get('/:id', requireAuth, async (req, res, next) => {
+  try {
+    const set = await findAccessibleSet(req.user, req.params.id, SET_INCLUDE)
+    if (!set) return res.status(404).json({ error: 'Set not found' })
+    res.json(set)
+  } catch (err) { next(err) }
+})
+
+// PUT /api/sets/:id/grade-share — a student shares a set they own with everyone in their grade
+// (visible to students whose grade matches the owner's current grade, and to all teachers)
+router.put('/:id/grade-share', requireAuth, async (req, res, next) => {
+  try {
+    const set = await prisma.wordSet.findUnique({ where: { id: req.params.id } })
+    if (!set || set.ownerId !== req.user.id) return res.status(403).json({ error: 'You do not own that set.' })
+    if (req.user.role !== 'student') return res.status(400).json({ error: 'Only students can share with their grade.' })
+    if (!req.user.gradeGroup) return res.status(400).json({ error: 'You have not been assigned a grade yet. Ask an admin.' })
+    await prisma.wordSet.update({ where: { id: set.id }, data: { sharedWithGrade: true } })
+    res.json({ ok: true })
+  } catch (err) { next(err) }
+})
+
+// DELETE /api/sets/:id/grade-share — the owner, or any teacher/admin, stops a grade share
+router.delete('/:id/grade-share', requireAuth, async (req, res, next) => {
+  try {
+    const set = await prisma.wordSet.findUnique({ where: { id: req.params.id } })
+    if (!set) return res.status(404).json({ error: 'Set not found' })
+    if (set.ownerId !== req.user.id && !isStaff(req.user.role)) return res.status(403).json({ error: 'Forbidden' })
+    await prisma.wordSet.update({ where: { id: set.id }, data: { sharedWithGrade: false } })
+    res.json({ ok: true })
   } catch (err) { next(err) }
 })
 
@@ -67,12 +117,12 @@ router.post('/', requireAuth, async (req, res, next) => {
   } catch (err) { next(err) }
 })
 
-// PUT /api/sets/:id — update title + replace cards (owner only)
+// PUT /api/sets/:id — update title + replace cards (owner or super admin)
 router.put('/:id', requireAuth, async (req, res, next) => {
   try {
     const set = await prisma.wordSet.findUnique({ where: { id: req.params.id } })
     if (!set) return res.status(404).json({ error: 'Set not found' })
-    if (set.ownerId !== req.user.id) return res.status(403).json({ error: 'Forbidden' })
+    if (!canEditSet(req.user, set)) return res.status(403).json({ error: 'Forbidden' })
 
     const { title, cards = [], isPublic, isSpanish } = req.body
     if (title !== undefined && title.length > 200) return res.status(400).json({ error: 'Title must be 200 characters or fewer' })
@@ -138,7 +188,7 @@ router.post('/:id/share', requireAuth, async (req, res, next) => {
     if (teacherId === req.user.id) return res.status(400).json({ error: 'Cannot share a set with yourself' })
 
     const target = await prisma.user.findUnique({ where: { id: teacherId } })
-    if (!target || !target.active || !['teacher', 'admin'].includes(target.role)) {
+    if (!target || !target.active || !STAFF_ROLES.includes(target.role)) {
       return res.status(400).json({ error: 'Target must be an active teacher' })
     }
 
@@ -169,14 +219,18 @@ router.post('/:id/share', requireAuth, async (req, res, next) => {
   } catch (err) { next(err) }
 })
 
-// DELETE /api/sets/:id (owner only)
+// DELETE /api/sets/:id (owner or super admin)
 router.delete('/:id', requireAuth, async (req, res, next) => {
   try {
     const set = await prisma.wordSet.findUnique({ where: { id: req.params.id } })
     if (!set) return res.status(404).json({ error: 'Set not found' })
-    if (set.ownerId !== req.user.id) return res.status(403).json({ error: 'Forbidden' })
+    if (!canEditSet(req.user, set)) return res.status(403).json({ error: 'Forbidden' })
 
-    await prisma.wordSet.delete({ where: { id: set.id } })
+    // game_results.set_id is ON DELETE RESTRICT, so a set anyone has played needs its results removed first
+    await prisma.$transaction([
+      prisma.gameResult.deleteMany({ where: { setId: set.id } }),
+      prisma.wordSet.delete({ where: { id: set.id } }),
+    ])
     res.json({ ok: true })
   } catch (err) { next(err) }
 })
